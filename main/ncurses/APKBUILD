@@ -83,6 +83,7 @@ build() {
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \
+		--prefix=/usr \
 		--mandir=/usr/share/man \
 		--without-ada \
 		--without-tests \

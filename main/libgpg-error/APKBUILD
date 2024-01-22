@@ -9,7 +9,9 @@ url="https://www.gnupg.org/"
 arch="all"
 license="GPL-2.0-or-later AND LGPL-2.1-or-later"
 subpackages="$pkgname-static $pkgname-dev $pkgname-doc $pkgname-lisp:lisp:noarch"
-source="https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-$pkgver.tar.bz2"
+source="https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-$pkgver.tar.bz2
+	normalize-gnu-triplet.patch
+	"
 
 build() {
 	./configure \
@@ -52,4 +54,5 @@ static() {
 
 sha512sums="
 bbb4b15dae75856ee5b1253568674b56ad155524ae29a075cb5b0a7e74c4af685131775c3ea2226fff2f84ef80855e77aa661645d002b490a795c7ae57b66a30  libgpg-error-1.47.tar.bz2
+d2489bbf14953b19d7f2db784ec70be5cfc0ee8e075021de46509be43cb41d8aafaaef178d26645cc4b99ab684f47e9583a4265d96ff8261654f36c6ce1f3b46  normalize-gnu-triplet.patch
 "

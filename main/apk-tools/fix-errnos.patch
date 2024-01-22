@@ -1,0 +1,126 @@
+--- a/src/io_url.c
++++ b/src/io_url.c
+@@ -39,7 +39,7 @@
+ 
+ static int fetch_maperror(int ec)
+ {
+-	static const signed short map[] = {
++	static const int map[] = {
+ 		[FETCH_ABORT] = -ECONNABORTED,
+ 		[FETCH_AUTH] = -EACCES,
+ 		[FETCH_DOWN] = -ECONNREFUSED,
+@@ -52,7 +52,11 @@
+ 		/* [FETCH_OK] = , */
+ 		[FETCH_PROTO] = -EPROTO,
+ 		[FETCH_RESOLV] = -ENXIO,
++#ifdef EREMOTEIO
+ 		[FETCH_SERVER] = -EREMOTEIO,
++#else
++		[FETCH_SERVER] = -EIO,
++#endif
+ 		[FETCH_TEMP] = -EAGAIN,
+ 		[FETCH_TIMEOUT] = -ETIMEDOUT,
+ 		[FETCH_UNAVAIL] = -ENOENT,
+--- a/src/database.c
++++ b/src/database.c
+@@ -2867,7 +2867,11 @@
+ 	if (pkg->filename == NULL) {
+ 		repo = apk_db_select_repo(db, pkg);
+ 		if (repo == NULL) {
++#ifdef ENOPKG
+ 			r = -ENOPKG;
++#else
++			r = -ENOENT;
++#endif
+ 			goto err_msg;
+ 		}
+ 		r = apk_repo_format_item(db, repo, pkg, &filefd, file, sizeof(file));
+--- a/src/apk_defines.h
++++ b/src/apk_defines.h
+@@ -39,6 +39,13 @@
+ #define EAPKDBFORMAT		1028
+ #define EAPKCACHE		1029
+ 
++#ifndef ENOKEY
++#define EAPKNOKEY		2000
++#endif
++#ifndef EKEYREJECTED
++#define EAPKKEYREJECTED		2001
++#endif
++
+ static inline void *ERR_PTR(long error) { return (void*) error; }
+ static inline void *ERR_CAST(const void *ptr) { return (void*) ptr; }
+ static inline int PTR_ERR(const void *ptr) { return (int)(long) ptr; }
+--- a/src/package.c
++++ b/src/package.c
+@@ -27,6 +27,14 @@
+ #include "apk_database.h"
+ #include "apk_print.h"
+ 
++#ifndef EKEYREJECTED
++#define EKEYREJECTED EAPKKEYREJECTED
++#endif
++
++#ifndef ENOKEY
++#define ENOKEY EAPKNOKEY
++#endif
++
+ static const apk_spn_match_def apk_spn_dependency_comparer = {
+ 	[7] = (1<<4) /*<*/ | (1<<5) /*=*/ | (1<<6) /*<*/,
+ 	[15] = (1<<6) /*~*/
+--- a/src/print.c
++++ b/src/print.c
+@@ -74,9 +74,17 @@
+ 	if (error < 0)
+ 		error = -error;
+ 	switch (error) {
++#ifdef ENOKEY
+ 	case ENOKEY:
++#else
++	case EAPKNOKEY:
++#endif
+ 		return "UNTRUSTED signature";
++#ifdef EKEYREJECTED
+ 	case EKEYREJECTED:
++#else
++	case EAPKKEYREJECTED:
++#endif
+ 		return "BAD signature";
+ 	case EIO:
+ 		return "IO ERROR";
+@@ -84,8 +92,10 @@
+ 		return "BAD archive";
+ 	case ENOMSG:
+ 		return "archive does not contain expected data";
++#ifdef ENOPKG
+ 	case ENOPKG:
+ 		return "could not find a repo which provides this package (check repositories file and run 'apk update')";
++#endif
+ 	case ECONNABORTED:
+ 		return "network connection aborted";
+ 	case ECONNREFUSED:
+@@ -94,8 +104,10 @@
+ 		return "network error (check Internet connection and firewall)";
+ 	case ENXIO:
+ 		return "DNS lookup error";
++#ifdef EREMOTEIO
+ 	case EREMOTEIO:
+ 		return "remote server returned error (try 'apk update')";
++#endif
+ 	case ETIMEDOUT:
+ 		return "operation timed out";
+ 	case EAGAIN:
+--- a/src/app_fetch.c
++++ b/src/app_fetch.c
+@@ -158,7 +158,11 @@
+ 
+ 	repo = apk_db_select_repo(db, pkg);
+ 	if (repo == NULL) {
++#ifdef ENOKPG
+ 		r = -ENOPKG;
++#else
++		r = -ENOENT;
++#endif
+ 		goto err;
+ 	}
+ 

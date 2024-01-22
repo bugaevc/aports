@@ -1,0 +1,13 @@
+--- a/update-ca.c
++++ b/update-ca.c
+@@ -195,6 +195,10 @@
+ 	free(actual_file);
+ }
+ 
++#ifndef PATH_MAX
++#define PATH_MAX 4096
++#endif
++
+ static void proc_etccertsdir(const char* fullpath, struct hash* h, int tmpfile_fd)
+ {
+ 	char linktarget[PATH_MAX];

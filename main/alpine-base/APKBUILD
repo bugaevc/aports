@@ -13,12 +13,12 @@ depends="
 	alpine-release
 	apk-tools
 	busybox
-	busybox-mdev-openrc
 	busybox-openrc
 	busybox-suid
 	libc-utils
 	openrc
 	"
+[ "$CKERNEL" = linux ] && depends="$depends busybox-mdev-openrc"
 subpackages="alpine-release:release"
 replaces="alpine-baselayout"
 options="!check"

@@ -1,0 +1,23 @@
+--- a/src/mkheader.c
++++ b/src/mkheader.c
+@@ -139,7 +139,7 @@
+   for (i=0, s=triplet; *s; s++)
+     if (*s == '-')
+       i++;
+-  if (i > 2 && !no_vendor_hack)
++  if (i >= 2 && !no_vendor_hack)
+     {
+       /* We have a 4 part "triplet": CPU-VENDOR-KERNEL-SYSTEM where
+        * the last two parts replace the OS part of a real triplet.
+--- a/src/mkheader.c
++++ b/src/mkheader.c
+@@ -98,7 +98,9 @@
+     {"arc-oe-linux-uclibc" }, /* and uclibc is also the same.  */
+ 
+     {"i486-pc-gnu", "i686-unknown-gnu"},
++    {"i486-unknown-gnu"},
+     {"i586-pc-gnu"},
++    {"i586-unknown-gnu"},
+     {"i686-pc-gnu"},
+ 
+     {"i486-pc-kfreebsd-gnu", "i686-unknown-kfreebsd-gnu"},

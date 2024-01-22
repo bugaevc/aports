@@ -15,7 +15,10 @@ replaces="openssl"
 options="!fhs !check"
 triggers="ca-certificates.trigger=/usr/share/ca-certificates:/usr/local/share/ca-certificates:/etc/ssl/certs:/etc/ca-certificates/update.d"
 install="$pkgname.post-deinstall"
-source="https://gitlab.alpinelinux.org/alpine/ca-certificates/-/archive/$pkgver/ca-certificates-$pkgver.tar.bz2"
+source="
+	https://gitlab.alpinelinux.org/alpine/ca-certificates/-/archive/$pkgver/ca-certificates-$pkgver.tar.bz2
+	hurd-add-ugly-path-max.patch
+	"
 
 build() {
 	make
@@ -70,4 +73,5 @@ bundle() {
 
 sha512sums="
 cb1941393b0e91cecb4febd149132fbd2ac2a663d07eb8b1333b1ce297b542718aeeb773dbdbdbe72425ec76c045d390ddd1e9ffa0d0d390311f549b1465f652  ca-certificates-20230506.tar.bz2
+cb6807d7052783a2f5bd3f2d806535a81c3aeffb75aa7128857f4d6ac77c50126193b44fa65b74fb558717fae87461df2b2c5f73277450d738a2261fcf5d255a  hurd-add-ugly-path-max.patch
 "

@@ -7,14 +7,14 @@ url="https://rockdaboot.github.io/libpsl"
 arch="all"
 license="MIT"
 depends_dev="$pkgname-utils=$pkgver-r$pkgrel"
-makedepends="python3 libidn2-dev libunistring-dev meson"
+makedepends_build="python3 meson"
+makedepends_host="libidn2-dev libunistring-dev"
 subpackages="$pkgname-static $pkgname-utils $pkgname-dev $pkgname-doc"
 source="https://github.com/rockdaboot/libpsl/releases/download/$pkgver/libpsl-$pkgver.tar.gz"
 
 build() {
 	abuild-meson \
 		--default-library=both \
-		-Db_lto=true \
 		. output
 	meson compile -C output
 }

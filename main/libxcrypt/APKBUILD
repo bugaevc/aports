@@ -1,0 +1,41 @@
+# Contributor: me <me@example.com>
+# Maintainer: me <me@example.com>
+pkgname=libxcrypt
+pkgver=4.4.36
+pkgrel=0
+pkgdesc="Extended crypt library for descrypt, md5crypt, bcrypt, and others"
+url="https://github.com/besser82/libxcrypt"
+arch="all"
+license="LGPL-2.1-or-later"
+makedepends_build="perl>=5.14.0 python3>=3.6 py3-passlib"
+makedepends_host="$CLIBC-dev"
+subpackages="$pkgname-static $pkgname-dev $pkgname-doc"
+source="https://github.com/besser82/libxcrypt/releases/download/v$pkgver/libxcrypt-$pkgver.tar.xz"
+
+[ "$BOOTSTRAP" = nobase ] || makedepends_host="$makedepends_host pkgconf"
+
+build() {
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--mandir=/usr/share/man \
+		--localstatedir=/var \
+		--enable-obsolete-api=no \
+		--enable-obsolete-api-enosys=no
+	# The above actually affects obsolete ABIs, not APIs
+	make
+}
+
+check() {
+	make check
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+	[ "$BOOTSTRAP" = nobase ] && rm -rf "$pkgdir"/usr/lib/pkgconfig
+}
+sha512sums="
+468560e6f90877540d22e32c867cbcf3786983a6fdae6ef86454f4b7f2bbaae1b6589d1af75cda73078fa8f6e91b1a32f8353f26d433246eef7be3e96d4ae1c7  libxcrypt-4.4.36.tar.xz
+"

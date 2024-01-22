@@ -6,7 +6,7 @@ pkgdesc="X transport library"
 url="https://xorg.freedesktop.org/"
 arch="noarch"
 license="MIT"
-makedepends="util-macros xmlto"
+makedepends_build="util-macros xmlto"
 source="https://www.x.org/releases/individual/lib/xtrans-$pkgver.tar.xz"
 
 build() {

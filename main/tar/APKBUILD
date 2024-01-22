@@ -6,7 +6,7 @@ pkgdesc="Utility used to store, backup, and transport files"
 url="https://www.gnu.org/software/tar/"
 arch="all"
 license="GPL-3.0-or-later"
-makedepends="acl-dev"
+makedepends_host="acl-dev"
 subpackages="$pkgname-doc"
 source="https://ftp.gnu.org/gnu/tar/tar-$pkgver.tar.xz
 	ignore-apk-tools-checksums.patch
@@ -27,9 +27,16 @@ source="https://ftp.gnu.org/gnu/tar/tar-$pkgver.tar.xz
 #     - CVE-2021-37701
 
 build() {
+	local _y2038_conf=
 	if [ -z "$BOOTSTRAP" ]; then
 		export CFLAGS="$CFLAGS -flto=auto"
 	fi
+	case "$CARCH" in
+	x86-hurd)
+		# i386-hurd uses 32-bit time_t, no way around that
+		_y2038_conf="--disable-year2038"
+		;;
+	esac
 	gl_cv_func_gettimeofday_clobber=no \
 	gl_cv_func_tzset_clobber=no \
 	./configure \
@@ -38,7 +45,8 @@ build() {
 		--prefix=/usr \
 		--sysconfdir=/etc \
 		--mandir=/usr/share/man \
-		--localstatedir=/var
+		--localstatedir=/var \
+		$_y2038_conf
 	make
 }
 

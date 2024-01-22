@@ -8,7 +8,8 @@ arch="all"
 license="X11"
 subpackages="$pkgname-static $pkgname-dev $pkgname-doc"
 depends_dev="libxcb-dev xtrans"
-makedepends="$depends_dev xorgproto util-macros xmlto"
+makedepends_build="xmlto xorgproto util-macros"
+makedepends_host="libxcb-dev xtrans"
 source="https://www.x.org/releases/individual/lib/libX11-$pkgver.tar.xz"
 builddir="$srcdir"/libX11-$pkgver
 

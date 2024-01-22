@@ -1,0 +1,24 @@
+--- a/networking/ping.c
++++ b/networking/ping.c
+@@ -828,8 +828,10 @@
+ 
+ 	if(using_dgram) {
+ 		int hold = 65536;
++#ifdef IP_RECVTTL
+ 		if (setsockopt(pingsock, SOL_IP, IP_RECVTTL, (char *)&hold, sizeof(hold)))
+ 			perror("WARNING: setsockopt(IP_RECVTTL)");
++#endif
+ 		if (setsockopt(pingsock, SOL_IP, IP_RETOPTS, (char *)&hold, sizeof(hold)))
+ 			perror("WARNING: setsockopt(IP_RETOPTS)");
+ 
+--- a/networking/traceroute.c
++++ b/networking/traceroute.c
+@@ -963,7 +963,7 @@
+ 
+ 	if (af == AF_INET) {
+ 		xmove_fd(xsocket(AF_INET, SOCK_RAW, IPPROTO_ICMP), rcvsock);
+-#if ENABLE_FEATURE_TRACEROUTE_VERBOSE
++#if ENABLE_FEATURE_TRACEROUTE_VERBOSE && defined(IP_PKTINFO)
+ 		/* want recvmsg to report target local address (for -v) */
+ 		setsockopt_1(rcvsock, IPPROTO_IP, IP_PKTINFO);
+ #endif

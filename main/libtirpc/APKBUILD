@@ -12,13 +12,12 @@ depends_dev="
 	bsd-compat-headers
 	krb5-dev
 	"
-makedepends="
-	$depends_dev
+makedepends_build="
 	autoconf
 	automake
 	libtool
-	linux-headers
 	"
+makedepends_host="$depends_dev"
 subpackages="
 	$pkgname-dbg
 	$pkgname-static

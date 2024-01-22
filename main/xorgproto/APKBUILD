@@ -7,7 +7,7 @@ pkgdesc="Combined X.Org X11 protocol headers"
 url="https://www.x.org"
 arch="noarch"
 license="BSD-2-Clause AND MIT AND X11"
-makedepends="meson util-macros"
+makedepends_build="meson util-macros"
 replaces="bigreqsproto compositeproto damageproto dri2proto dri3proto fixesproto
 	fontsproto glproto inputproto kbproto presentproto printproto randrproto
 	recordproto renderproto resourceproto scrnsaverproto videoproto xcmiscproto

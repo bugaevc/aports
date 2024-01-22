@@ -11,7 +11,9 @@ url="https://busybox.net/"
 arch="all"
 license="GPL-2.0-only"
 makedepends_build="perl"
-makedepends_host="linux-headers openssl-dev>3"
+makedepends_host="openssl-dev>3 $CLIBC-static"
+[ "$CKERNERL" = linux ] && makedepends_host="$makedepends_host linux-headers"
+[ "$CLIBC" = glibc ] && makedepends_host="$makedepends_host libxcrypt-dev libxcrypt-static"
 # Only build with utmps support if we are not bootstraping.
 # skalibs-static is needed for utmps-static
 [ -z "$BOOTSTRAP" ] && makedepends_host="$makedepends_host utmps-dev utmps-static skalibs-static"
@@ -27,10 +29,10 @@ subpackages="
 	$pkgname-ifupdown::noarch
 	$pkgname-binsh::noarch
 	$pkgname-openrc
-	$pkgname-mdev-openrc:mdev_openrc
 	$pkgname-extras
 	$pkgname-extras-openrc:extras_openrc
 	"
+[ "$CKERNEL" = linux ] && subpackages="$subpackages $pkgname-mdev-openrc:mdev_openrc"
 options="suid net" # net needed for check()
 replaces="busybox-initscripts" # move of default.script
 triggers="busybox.trigger=/bin:/usr/bin:/sbin:/usr/sbin:/lib/modules/*"
@@ -81,6 +83,12 @@ source="https://busybox.net/downloads/busybox-$pkgver.tar.bz2
 	0032-install-Fix-chown-resetting-suid-sgid-bits-from-chmo.patch
 	0033-find-fix-xdev-depth-and-delete.patch
 	0034-udhcp-Avoid-leaking-uninitialized-stale-data.patch
+
+	platform-linux.patch
+	platform-linux-more.patch
+	disable-projid-on-hurd.patch
+	make-networking-build-on-hurd.patch
+	fix-undefined-symbol.patch
 
 	acpid.logrotate
 	busyboxconfig
@@ -425,6 +433,11 @@ f12c2d5cdb3a6b81f109029b22a6b1064a32aee5a2c5ff0b0a290f9090d5eda060b35f62f2faba33
 0d71e70ed3de87f11a8a94e00b26e74d437b7ae96292507f1d42c850f461a4ea9de28d19f4fbfee087042fa6b14362e7046618d5dd0833cfac96954002766a60  0032-install-Fix-chown-resetting-suid-sgid-bits-from-chmo.patch
 724cfa5dd9eba1b4de448d2e29762821492435e1687d5345b000309f8b38a20f735d57ee6e44c476add94ccb42dd01157d95b75c2da191d04e924dd6635992de  0033-find-fix-xdev-depth-and-delete.patch
 7e929e71b398502f91b429b29c43a93ac05d2281cd8b021a5398f4ecaedd8061c048833ecc8f012adade2a197de85f18cb12f9513867222ea17f0acb9e7d9161  0034-udhcp-Avoid-leaking-uninitialized-stale-data.patch
+fcd74443aff7a91edc2b049ccd56697e7736943f40a52245ccf3a4a5a23e779d513861d588169de4ede25e149c0cfbfcba0b75a22385dbd4498adfcb12ada8f9  platform-linux.patch
+b0daf7a2a78b5f508f04db58a59e8c4a4a1671a2235cbcfae440cd8c7050b477eee26ccf410380b409a85067d4a2419e3b7348f745ef7c6fed980925adcd9d5a  platform-linux-more.patch
+f3cca2dc523b15af69068aad9b813d085a8b1c7175d53dd5824cd4fdd565f736aa88bfe54fa9368490b0a9ec9a2263209441a1bd6bd81566ffe3c21c282b45a4  disable-projid-on-hurd.patch
+8d7c61703256a8482942b7c45c181802531e441a5c795d06d743d3b71ec1660d4e75887b2ca54b9b252764b42671cef73dc8d96e9fce1a70798b2b8dc25a53e6  make-networking-build-on-hurd.patch
+bf6cd811b364ab291539b9b4491fff4bef68f9a05d852661bbc5c7647a7006737f7720c17a079386db9d103c0b67e49f76ae0d033cedae81d9fd3621945825e7  fix-undefined-symbol.patch
 aa93095e20de88730f526c6f463cef711b290b9582cdbd8c1ba2bd290019150cbeaa7007c2e15f0362d5b9315dd63f60511878f0ea05e893f4fdfb4a54af3fb1  acpid.logrotate
 076f13b9d85ebf23aff8c0a2f313d3ca05f4d1c0d3ed06b0bc274d41deda3bd4808a8381f7c0411e8188b67315cc7ac8dced1b4473cda3c247773dbce2b71f55  busyboxconfig
 cfd96023125ca27c6eddb13af490a36e5e7d2fcfd0847363e48f1fa5ce237e93e6a9fe4577feeb35291d79d6240ae5e6a518b9258966e0fac27e30a43172b792  busyboxconfig-extras

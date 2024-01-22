@@ -10,8 +10,15 @@ subpackages="$pkgname-static $pkgname-dev $pkgname-doc"
 depends_dev="libxau-dev xcb-proto"
 checkdepends="check-dev"
 options="!check" # upstream requires an old check version (0.9.4)
-makedepends="$depends_dev libxdmcp-dev libxslt python3"
-source="https://xorg.freedesktop.org/archive/individual/lib/libxcb-$pkgver.tar.xz"
+makedepends_build="libxslt python3 autoconf automake util-macros libtool"
+makedepends_host="libxau-dev xcb-proto libxdmcp-dev"
+source="https://xorg.freedesktop.org/archive/individual/lib/libxcb-$pkgver.tar.xz
+	accept-gnu.patch"
+
+prepare() {
+	default_prepare
+	autoreconf -vif
+}
 
 build() {
 	./configure \
@@ -34,4 +41,5 @@ check() {
 
 sha512sums="
 002fbc126c6f09eb7db5e4197cd0572d495f64b6de714a76d9a024fe3e13122c1cfc7c55207c0dee76cc63fcccf87b37db513223eadaf760af2bd2a926443bf8  libxcb-1.16.tar.xz
+32e8f05861a45421e28e5101d37598b71fb4860d4979b6f38955b279228ae4a6b7dfd29d51f4a970ea0a0838322cdd9373e5a1911664444a87328c95eb36f889  accept-gnu.patch
 "

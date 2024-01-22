@@ -12,11 +12,10 @@ license="GPL-3.0-or-later AND GPL-2.0-or-later AND GPL-2.0-only AND
 	BSD-3-Clause AND BSD-4-Clause-UC AND MIT AND Public-Domain"
 checkdepends="bash findutils xz"
 makedepends_host="
-	libcap-ng-dev
-	linux-headers
 	ncurses-dev
 	zlib-dev
 	"
+[ "$CKERNEL" = linux ] && makedepends_host="$makedepends_host libcap-ng-dev linux-headers"
 subpackages="
 	$pkgname-bash-completion
 	$pkgname-static
@@ -34,21 +33,27 @@ subpackages="
 	cfdisk:_mv_bin
 	findmnt:_mv_bin
 	flock:_mv_bin
-	fstrim:_mv_bin
 	hexdump:_mv_bin
 	logger:_mv_bin
-	losetup:_mv_bin
-	lsblk:_mv_bin
 	mcookie:_mv_bin
-	mount:_mv_bin
-	partx:_mv_bin
-	setarch:_mv_bin
-	setpriv:_mv_bin
 	sfdisk:_mv_bin
-	umount:_mv_bin
 	uuidgen:_mv_bin
 	wipefs:_mv_bin
 	"
+
+if [ "$CKERNEL" = linux ]; then
+	subpackages="$subpackages
+		fstrim:_mv_bin
+		losetup:_mv_bin
+		lsblk:_mv_bin
+		mount:_mv_bin
+		partx:_mv_bin
+		setarch:_mv_bin
+		setpriv:_mv_bin
+		umount:_mv_bin
+	"
+fi
+
 if [ -z "$BOOTSTRAP" ]; then
 	checkdepends="bash findutils xz procps coreutils"
 	makedepends_build="$makedepends_build asciidoctor"

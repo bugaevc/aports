@@ -1,0 +1,11 @@
+--- a/meson.build
++++ b/meson.build
+@@ -43,7 +43,7 @@
+   os = option_os
+ endif
+ 
+-if os != 'Linux'
++if os not in ['Linux', 'GNU']
+   kvm_dep = cc.find_library('kvm', required: true)
+ else
+   kvm_dep = []

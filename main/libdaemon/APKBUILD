@@ -18,6 +18,8 @@ prepare() {
 }
 
 build() {
+	ac_cv_func_getpgrp_void=no \
+	ac_cv_func_setpgrp_void=yes \
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \
