@@ -1,0 +1,55 @@
+From c768917402d4cba69a92c737e56e177f5b8ab0df Mon Sep 17 00:00:00 2001
+From: Samuel Thibault <samuel.thibault@gnu.org>
+Date: Sat, 6 May 2023 13:55:44 +0200
+Subject: [PATCH] hurd: Ad default-pie and static-pie support
+
+This fixes the Hurd spec in the default-pie case, and adds static-pie
+support.
+
+gcc/ChangeLog:
+
+	* config/i386/gnu.h: Use PIE_SPEC, add static-pie case.
+	* config/i386/gnu64.h: Use PIE_SPEC, add static-pie case.
+---
+ gcc/config/i386/gnu.h   | 6 +++---
+ gcc/config/i386/gnu64.h | 6 +++---
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/gcc/config/i386/gnu.h b/gcc/config/i386/gnu.h
+index 8dc6d9ee4e352..e776144f96c76 100644
+--- a/gcc/config/i386/gnu.h
++++ b/gcc/config/i386/gnu.h
+@@ -27,12 +27,12 @@ along with GCC.  If not, see <http://www.gnu.org/licenses/>.
+ #undef	STARTFILE_SPEC
+ #if defined HAVE_LD_PIE
+ #define STARTFILE_SPEC \
+-  "%{!shared: %{pg|p|profile:%{static:gcrt0.o%s;:gcrt1.o%s};pie:Scrt1.o%s;static:crt0.o%s;:crt1.o%s}} \
+-   crti.o%s %{static:crtbeginT.o%s;shared|pie:crtbeginS.o%s;:crtbegin.o%s}"
++  "%{!shared: %{pg|p|profile:%{static-pie:grcrt0.o%s;static:gcrt0.o%s;:gcrt1.o%s};static-pie:rcrt0.o%s;static:crt0.o%s;" PIE_SPEC ":Scrt1.o%s;:crt1.o%s}} \
++   crti.o%s %{static:crtbeginT.o%s;shared|static-pie|" PIE_SPEC ":crtbeginS.o%s;:crtbegin.o%s}"
+ #else
+ #define STARTFILE_SPEC \
+   "%{!shared: %{pg|p|profile:%{static:gcrt0.o%s;:gcrt1.o%s};static:crt0.o%s;:crt1.o%s}} \
+-   crti.o%s %{static:crtbeginT.o%s;shared|pie:crtbeginS.o%s;:crtbegin.o%s}"
++   crti.o%s %{static:crtbeginT.o%s;shared:crtbeginS.o%s;:crtbegin.o%s}"
+ #endif
+ 
+ #ifdef TARGET_LIBC_PROVIDES_SSP
+diff --git a/gcc/config/i386/gnu64.h b/gcc/config/i386/gnu64.h
+index a411f0e802a9b..332372fa0678a 100644
+--- a/gcc/config/i386/gnu64.h
++++ b/gcc/config/i386/gnu64.h
+@@ -31,10 +31,10 @@ along with GCC.  If not, see <http://www.gnu.org/licenses/>.
+ #undef	STARTFILE_SPEC
+ #if defined HAVE_LD_PIE
+ #define STARTFILE_SPEC \
+-  "%{!shared: %{pg|p|profile:%{static:gcrt0.o%s;:gcrt1.o%s};pie:Scrt1.o%s;static:crt0.o%s;:crt1.o%s}} \
+-   crti.o%s %{static:crtbeginT.o%s;shared|pie:crtbeginS.o%s;:crtbegin.o%s}"
++  "%{!shared: %{pg|p|profile:%{static-pie:grcrt0.o%s;static:gcrt0.o%s;:gcrt1.o%s};static-pie:rcrt0.o%s;static:crt0.o%s;" PIE_SPEC ":Scrt1.o%s;:crt1.o%s}} \
++   crti.o%s %{static:crtbeginT.o%s;shared|static-pie|" PIE_SPEC ":crtbeginS.o%s;:crtbegin.o%s}"
+ #else
+ #define STARTFILE_SPEC \
+   "%{!shared: %{pg|p|profile:%{static:gcrt0.o%s;:gcrt1.o%s};static:crt0.o%s;:crt1.o%s}} \
+-   crti.o%s %{static:crtbeginT.o%s;shared|pie:crtbeginS.o%s;:crtbegin.o%s}"
++   crti.o%s %{static:crtbeginT.o%s;shared|static-pie|" PIE_SPEC ":crtbeginS.o%s;:crtbegin.o%s}"
+ #endif

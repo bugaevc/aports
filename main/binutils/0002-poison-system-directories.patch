@@ -1,0 +1,173 @@
+--- binutils-2.41/ld/config.in
++++ binutils-2.41-patched/ld/config.in
+@@ -58,6 +58,9 @@
+    language is requested. */
+ #undef ENABLE_NLS
+ 
++/* Define to warn for use of native system library directories */
++#undef ENABLE_POISON_SYSTEM_DIRECTORIES
++
+ /* Additional extension a shared object might have. */
+ #undef EXTRA_SHLIB_EXTENSION
+ 
+--- binutils-2.41/ld/configure
++++ binutils-2.41-patched/ld/configure
+@@ -839,6 +839,7 @@
+ enable_targets
+ enable_64_bit_bfd
+ with_sysroot
++enable_poison_system_directories
+ enable_gold
+ enable_got
+ enable_compressed_debug_sections
+@@ -1521,6 +1522,8 @@
+   --enable-checking       enable run-time checks
+   --enable-targets        alternative target configurations
+   --enable-64-bit-bfd     64-bit support (on hosts with narrower word sizes)
++  --enable-poison-system-directories
++                          warn for use of native system library directories
+   --enable-gold[=ARG]     build gold [ARG={default,yes,no}]
+   --enable-got=<type>     GOT handling scheme (target, single, negative,
+                           multigot)
+@@ -15504,7 +15507,18 @@
+ fi
+ 
+ 
++# Check whether --enable-poison-system-directories was given.
++if test "${enable_poison_system_directories+set}" = set; then :
++  enableval=$enable_poison_system_directories;
++else
++  enable_poison_system_directories=no
++fi
+ 
++if test "x${enable_poison_system_directories}" = "xyes"; then
++
++$as_echo "#define ENABLE_POISON_SYSTEM_DIRECTORIES 1" >>confdefs.h
++
++fi
+ 
+ # Check whether --enable-got was given.
+ if test "${enable_got+set}" = set; then :
+--- binutils-2.41/ld/configure.ac
++++ binutils-2.41-patched/ld/configure.ac
+@@ -103,6 +103,16 @@
+ AC_SUBST(TARGET_SYSTEM_ROOT)
+ AC_SUBST(TARGET_SYSTEM_ROOT_DEFINE)
+ 
++AC_ARG_ENABLE([poison-system-directories],
++         AS_HELP_STRING([--enable-poison-system-directories],
++                [warn for use of native system library directories]),,
++         [enable_poison_system_directories=no])
++if test "x${enable_poison_system_directories}" = "xyes"; then
++  AC_DEFINE([ENABLE_POISON_SYSTEM_DIRECTORIES],
++       [1],
++       [Define to warn for use of native system library directories])
++fi
++
+ dnl Use --enable-gold to decide if this linker should be the default.
+ dnl "install_as_default" is set to false if gold is the default linker.
+ dnl "installed_linker" is the installed BFD linker name.
+--- binutils-2.41/ld/ld.h
++++ binutils-2.41-patched/ld/ld.h
+@@ -163,6 +163,10 @@
+      in the linker script.  */
+   bool force_group_allocation;
+ 
++  /* If TRUE (the default) warn for uses of system directories when
++     cross linking.  */
++  bool poison_system_directories;
++
+   /* Big or little endian as set on command line.  */
+   enum endian_enum endian;
+ 
+--- binutils-2.41/ld/ld.texi
++++ binutils-2.41-patched/ld/ld.texi
+@@ -3048,6 +3048,13 @@
+ Passing @code{none} for @var{style} disables the setting from any
+ @code{--build-id} options earlier on the command line.
+ 
++@kindex --no-poison-system-directories
++@item --no-poison-system-directories
++Do not warn for @option{-L} options using system directories such as
++@file{/usr/lib} when cross linking.  This option is intended for use
++in chroot environments when such directories contain the correct
++libraries for the target system rather than the host.
++
+ @kindex --package-metadata=@var{JSON}
+ @item --package-metadata=@var{JSON}
+ Request the creation of a @code{.note.package} ELF note section.  The
+--- binutils-2.41/ld/ldfile.c
++++ binutils-2.41-patched/ld/ldfile.c
+@@ -313,6 +313,28 @@
+   if (!cmdline && config.only_cmd_line_lib_dirs)
+     return;
+ 
++#ifdef ENABLE_POISON_SYSTEM_DIRECTORIES
++  if (command_line.poison_system_directories)
++    {
++      char *rp = realpath (name, NULL);
++      if (!rp)
++        goto after_poison;
++      if ((!strncmp (rp, "/lib", 4) && strncmp (rp, "/lib/gcc/", 9))
++          || (!strncmp (rp, "/usr/lib", 8) && strncmp (rp, "/usr/lib/gcc/", 13))
++          || (!strncmp (rp, "/usr/local/lib", 14))
++          || (!strncmp (rp, "/usr/X11R6/lib", 14)))
++        {
++        if (command_line.poison_system_directories)
++          einfo (_("%P: warning: ignoring library search path \"%s\" (\"%s\"), which is unsafe for "
++              "cross-compilation (this typically results from a libtool bug)\n"), name, rp);
++          free (rp);
++          return;
++        }
++      free (rp);
++    }
++  after_poison:
++#endif
++
+   new_dirs = (search_dirs_type *) xmalloc (sizeof (search_dirs_type));
+   new_dirs->next = NULL;
+   new_dirs->cmdline = cmdline;
+--- binutils-2.41/ld/ldlex.h
++++ binutils-2.41-patched/ld/ldlex.h
+@@ -168,6 +168,7 @@
+   OPTION_CTF_VARIABLES,
+   OPTION_NO_CTF_VARIABLES,
+   OPTION_CTF_SHARE_TYPES,
++  OPTION_NO_POISON_SYSTEM_DIRECTORIES,
+   OPTION_WARN_EXECSTACK,
+   OPTION_NO_WARN_EXECSTACK,
+   OPTION_WARN_RWX_SEGMENTS,
+--- binutils-2.41/ld/ldmain.c
++++ binutils-2.41-patched/ld/ldmain.c
+@@ -325,6 +325,7 @@
+   command_line.warn_mismatch = true;
+   command_line.warn_search_mismatch = true;
+   command_line.check_section_addresses = -1;
++  command_line.poison_system_directories = true;
+ 
+   /* We initialize DEMANGLING based on the environment variable
+      COLLECT_NO_DEMANGLE.  The gcc collect2 program will demangle the
+--- binutils-2.41/ld/lexsup.c
++++ binutils-2.41-patched/ld/lexsup.c
+@@ -629,6 +629,10 @@
+ 		   "                                <method> is: share-unconflicted (default),\n"
+ 		   "                                             share-duplicated"),
+     TWO_DASHES },
++  { {"no-poison-system-directories", no_argument, NULL,
++    OPTION_NO_POISON_SYSTEM_DIRECTORIES},
++    '\0', NULL, N_("Do not warn for -L options using system directories"),
++    TWO_DASHES },
+ };
+ 
+ #define OPTION_COUNT ARRAY_SIZE (ld_options)
+@@ -1736,6 +1740,10 @@
+ 	    else
+ 	      einfo (_("%X%P: --hash-size needs a numeric argument\n"));
+ 	  }
++	  break;
++
++	case OPTION_NO_POISON_SYSTEM_DIRECTORIES:
++	  command_line.poison_system_directories = false;
+ 	  break;
+ 
+ 	case OPTION_PUSH_STATE:
