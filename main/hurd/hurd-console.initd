@@ -1,0 +1,9 @@
+#!/sbin/openrc-run
+
+command="/bin/console
+	-d current_vcs
+	-d vga
+	-d pc_kbd --repeat=kbd
+	-d pc_mouse --protocol=ps/2 --repeat=mouse"
+description="Hurd console"
+pidfile="/var/run/hurd/console.pid"

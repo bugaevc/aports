@@ -1,0 +1,82 @@
+# Contributor: me <me@example.com>
+# Maintainer: me <mw@example.com>
+pkgname=gnumach
+pkgver=1.8_git20240119
+pkgrel=0
+pkgdesc="GNU distribution of the Mach microkernel"
+url="https://www.gnu.org/software/hurd/microkernel/mach/gnumach.html"
+arch="x86-hurd x86_64-hurd"
+license="GPL-2.0-or-later"
+
+makedepends_build="autoconf automake texinfo"
+
+case "$BOOTSTRAP" in
+nocc)
+	pkgname="gnumach-dev"
+	subpackages=""
+	;;
+*)
+	if [ "$CBUILD" != "$CHOST" ] ; then
+		makedepends_build="$makedepends_build mig-$(hostspec_to_arch $CHOST)"
+	else
+		makedepends_build="$makedepends_build mig"
+	fi
+	subpackages="$pkgname-dev $pkgname-doc"
+	;;
+esac
+
+
+
+_commit=dd4dcfdefb3e8fc37b6f113a58cd1c628e096dee
+
+source="
+	http://git.savannah.gnu.org/cgit/hurd/gnumach.git/snapshot/gnumach-$_commit.tar.gz
+	allow-got.patch
+	"
+builddir="$srcdir/gnumach-$_commit"
+
+prepare() {
+	default_prepare
+	autoreconf -vif
+}
+
+build() {
+	if [ "$BOOTSTRAP" = nocc ] ; then
+		export CC=gcc
+		export CPPFLAGS=
+	fi
+	# LDFLAGS get passed to ld, not cc.
+	# It's easiest to unset ours.
+	LDFLAGS= \
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--exec-prefix=/ \
+		--mandir=/usr/share/man \
+		--localstatedir=/var \
+		--disable-user32
+	[ "$BOOTSTRAP" = nocc ] || make
+}
+
+check() {
+	[ "$BOOTSTRAP" = nocc ] || make check
+}
+
+package() {
+	case "$BOOTSTRAP" in
+	nocc)	make DESTDIR="$pkgdir" install-data;;
+	*)	make DESTDIR="$pkgdir" install;;
+	esac
+}
+
+dev() {
+	default_dev
+	amove usr/share/msgids/gnumach.msgids
+}
+
+sha512sums="
+688ea5b2bf766b29db8ef9b9a2611a4656fe5cdf3a2b8ac6299cec576d972d9acdfbd25a4b32766f552ebf76687e45ab6d5c7fea1bae65100851d2ca095d81b2  gnumach-dd4dcfdefb3e8fc37b6f113a58cd1c628e096dee.tar.gz
+ce6c048c2def2d633e19f1e540eb1c108774ec75bb2800b0f9357176ddb0b84db920a34ff8ffb43cf4e0df86105d1f90c05d9906aa44f16fce1934b9ab784101  allow-got.patch
+"

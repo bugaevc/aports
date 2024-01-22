@@ -1,0 +1,22 @@
+--- glibc-2.38/debug/xtrace.sh
++++ glibc-2.38-patched/debug/xtrace.sh
+@@ -16,7 +16,7 @@
+ # License along with the GNU C Library; if not, see
+ # <https://www.gnu.org/licenses/>.
+ 
+-pcprofileso='@SLIBDIR@/libpcprofile.so'
++pcprofileso='@LIBDIR@/libpcprofile.so'
+ pcprofiledump='@BINDIR@/pcprofiledump'
+ TEXTDOMAIN=libc
+ 
+--- glibc-2.38/malloc/memusage.sh
++++ glibc-2.38-patched/malloc/memusage.sh
+@@ -16,7 +16,7 @@
+ # License along with the GNU C Library; if not, see
+ # <https://www.gnu.org/licenses/>.
+ 
+-memusageso='@SLIBDIR@/libmemusage.so'
++memusageso='@LIBDIR@/libmemusage.so'
+ memusagestat='@BINDIR@/memusagestat'
+ TEXTDOMAIN=libc
+ 

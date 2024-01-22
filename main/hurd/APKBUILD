@@ -1,0 +1,228 @@
+# Contributor: me <me@example.com>
+# Maintainer: me <mw@example.com>
+pkgname=hurd
+pkgver=0.9_git20231230
+pkgrel=0
+pkgdesc="GNU project's replacement for the Unix kernel"
+url="https://www.gnu.org/software/hurd/"
+arch="x86-hurd x86_64-hurd aarch64-hurd"
+license="GPL-2.0-or-later"
+
+makedepends_build="autoconf automake"
+if [ "$CBUILD" != "$CHOST" ] ; then
+	makedepends_build="$makedepends_build mig-$(hostspec_to_arch $CHOST)"
+else
+	makedepends_build="$makedepends_build mig"
+fi
+
+case "$BOOTSTRAP" in
+nocc)
+	pkgname="hurd-dev"
+	subpackages="hurd-libs-dev:libs_dev"
+	;;
+*)
+	subpackages="
+		$pkgname-libs
+		$pkgname-libs-static
+		$pkgname-libs-dev:libs_dev
+		$pkgname-dev
+		$pkgname-doc
+		$pkgname-console
+		$pkgname-console-openrc:console_openrc
+		$pkgname-extra-trans:extratrans
+		$pkgname-ftp
+		$pkgname-utils
+		$pkgname-tests
+		"
+	makedepends_build="$makedepends_build gawk bison flex texinfo"
+	makedepends_host="
+		glibc-dev glibc-static
+		libxcrypt-dev libxcrypt-static
+		gnumach-dev
+		bzip2-dev bzip2-static
+		zlib-dev zlib-static
+		util-linux-dev util-linux-static
+		libdaemon-dev
+		libgcrypt-dev
+		"
+	;;
+esac
+
+case "$BOOTSTRAP" in
+nocc)
+	;;
+stage1)
+	subpackages="$pkgname-libs $pkgname-libs-static $pkgname-libs-dev:libs_dev $pkgname-dev"
+	;;
+minimal)
+	makedepends_host="$makedepends_host parted-dev parted-static"
+	;;
+*)
+	subpackages="$subpackages $pkgname-nfs"
+	makedepends_host="$makedepends_host parted-dev parted-static libpciaccess-dev libtirpc-dev libx11-dev"
+	# TODO: lwip-dev acpica-dev rump
+	depends="xkeyboard-config"
+	;;
+esac
+
+depends_dev="gnumach-dev"
+
+
+_commit=69905110f5d840dbb0e0986f7eade8cfc9d3dafc
+
+source="http://git.savannah.gnu.org/cgit/hurd/hurd.git/snapshot/hurd-$_commit.tar.gz
+	fix-buildsystem-race.patch
+	hurd-console.initd"
+builddir="$srcdir/hurd-$_commit"
+
+prepare() {
+	default_prepare
+	autoreconf -vif
+}
+
+build() {
+	if [ "$BOOTSTRAP" = nocc ]; then
+		CC=gcc CPPFLAGS= \
+		./configure \
+			--build=$CBUILD \
+			--host=$CHOST \
+			--prefix=/usr \
+			--exec-prefix= \
+			--sysconfdir=/etc \
+			--mandir=/usr/share/man \
+			--localstatedir=/var \
+			--without-parted --without-libcrypt --without-libbz2 --without-libz --without-rump
+		return
+	fi
+
+	local _without_configure="--without-rump"
+	local _static_configure="--enable-static-progs=ext2fs,rumpdisk,pci-arbiter,acpi"
+	if [ "$BOOTSTRAP" = stage1 ]; then
+		_without_configure="$_without_configure --without-parted"
+		_static_configure="--disable-static-progs"
+	fi
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr \
+		--exec-prefix= \
+		--sysconfdir=/etc \
+		--mandir=/usr/share/man \
+		--localstatedir=/var \
+		--with-libgcrypt-prefix="$CBUILDROOT/usr" \
+		$_without_configure \
+		$_static_configure
+	make
+}
+
+check() {
+	[ "$BOOTSTRAP" = nocc ] || make check
+}
+
+package() {
+	case "$BOOTSTRAP" in
+	nocc)
+		make DESTDIR="$pkgdir" no_deps=t install-headers
+		return
+		;;
+	esac
+	make DESTDIR="$pkgdir" install
+
+	# Drop the libftpconn.so symlink, since we're going to be moving
+	# the library into /usr/lib, and other code should not be linking
+	# to it much anyway.
+	rm "$pkgdir"/lib/libftpconn.so
+
+	# Rename stuff
+	mv -v "$pkgdir"/etc/motd "$pkgdir"/etc/motd.hurd
+	mv -v "$pkgdir"/sbin/reboot "$pkgdir"/sbin/reboot-hurd
+	mv -v "$pkgdir"/sbin/halt "$pkgdir"/sbin/halt-hurd
+	ln -s halt-hurd "$pkgdir"/sbin/poweroff-hurd
+	mv -v "$pkgdir"/bin/mount "$pkgdir"/bin/umount "$pkgdir"/sbin/
+	mkdir -p "$pkgdir"/dev
+	mv -v "$pkgdir"/usr/dev/MAKEDEV "$pkgdir"/dev/
+	rmdir "$pkgdir"/usr/dev
+
+	options="suid textrels"  # login, w, ps; investigate textrels in pfinet!
+}
+
+libs() {
+	default_libs
+	# Undo the libftpconn move, we'll put that one into hurd-ftp
+	mv -v "$subpkgdir"/lib/libftpconn.so.0.3 "$pkgdir"/lib/
+	# Undo the libcons move, we'll put that one into hurd-console
+	mv -v "$subpkgdir"/lib/libcons.so.0.3 "$pkgdir"/lib/
+}
+
+libs_dev() {
+	depends="$pkgname-libs=$pkgver-r$pkgrel $pkgname-dev=$pkgver-r$pkgrel glibc-dev gnumach-dev"
+	[ "$BOOTSTRAP" = nocc ] && depends="gnumach-dev"
+	[ "$BOOTSTRAP" = nocc ] || amove 'lib/*.so'
+	amove 'usr/include/*.h'
+	# TODO: Consider console.h?
+	local _hdr; for _hdr in \
+		bpf_impl cons diskfs-pager diskfs fshelp ihash iohelp \
+		machdev-dev_hdr machdev-device_emul machdev netfs pager \
+		pipe port-deref-deferred ports pq queue rlock slab store trivfs \
+	; do
+		amove usr/include/hurd/"$_hdr".h
+	done
+}
+
+console() {
+	install_if="$pkgname=$pkgver-r$pkgrel openrc"
+	amove hurd/console bin/console lib/libcons.so.0.3 lib/hurd/console/ libexec/console-run
+}
+
+console_openrc() {
+	depends="$pkgname-console"
+	install_if="openrc $pkgname-console=$pkgver-r$pkgrel"
+	install -Dm 755 "$srcdir"/hurd-console.initd "$subpkgdir"/etc/init.d/hurd-console
+}
+
+extratrans() {
+	amove hurd/fwd hurd/firmlink hurd/hello hurd/hello-mt hurd/new-fifo hurd/password hurd/usermux hurd/hostmux hurd/eth-multiplexer
+}
+
+nfs() {
+	amove hurd/nfs hurd/nfsd
+}
+
+ftp() {
+	amove hurd/ftpfs
+	mkdir -p "$subpkgdir"/usr/lib "$subpkgdir"/usr/bin
+	mv -v "$pkgdir"/bin/ftpcp "$pkgdir"/bin/ftpdir "$subpkgdir"/usr/bin/
+	mv -v "$pkgdir"/lib/libftpconn.so.0.3 "$subpkgdir"/usr/lib/
+}
+
+utils() {
+	options="suid"  # ids is suid
+
+	amove hurd/remap hurd/fakeroot usr/share/msgids/hurd.msgids
+	mkdir -p "$subpkgdir"/usr/bin "$subpkgdir"/usr/sbin
+	mv -v "$pkgdir"/bin/boot "$pkgdir"/bin/devprobe "$pkgdir"/bin/forks "$pkgdir"/bin/ids \
+		"$pkgdir"/bin/loginpr "$pkgdir"/bin/msgport "$pkgdir"/bin/nullauth \
+		"$pkgdir"/bin/portinfo "$pkgdir"/bin/remap "$pkgdir"/bin/fakeroot "$pkgdir"/bin/fakeauth \
+		"$pkgdir"/bin/addauth "$pkgdir"/bin/setauth "$pkgdir"/bin/rmauth \
+		"$pkgdir"/bin/storecat "$pkgdir"/bin/storeinfo "$pkgdir"/bin/storeread \
+		"$pkgdir"/bin/rpcscan "$pkgdir"/bin/rpctrace \
+		"$pkgdir"/bin/shd "$pkgdir"/bin/sush "$pkgdir"/bin/unsu \
+		"$pkgdir"/bin/vminfo "$pkgdir"/bin/vmstat "$pkgdir"/bin/vmallocate "$pkgdir"/bin/gcore \
+		"$subpkgdir"/usr/bin/
+	mv -v "$pkgdir"/sbin/e2os "$pkgdir"/sbin/bless "$subpkgdir"/usr/sbin/
+}
+
+tests() {
+	mkdir -p "$subpkgdir"/usr/bin
+	mv -v "$pkgdir"/bin/fork \
+		"$pkgdir"/bin/fstests "$pkgdir"/bin/locks "$pkgdir"/bin/race \
+		"$pkgdir"/bin/test-fcntl "$pkgdir"/bin/test-flock "$pkgdir"/bin/test-lockf \
+		"$pkgdir"/bin/timertest \
+		"$subpkgdir"/usr/bin/
+}
+
+sha512sums="
+74f6eedb9274af03414d454ec9e3cfbef625f824dc2ef818d7dbbda61a4ddf06abc75eacaf1a77be06f4c745323c37b6c02542118cc9c6a7018decd65fdff941  hurd-69905110f5d840dbb0e0986f7eade8cfc9d3dafc.tar.gz
+6e2ee398bb52c002467a7f0c4edac9867da96b4dcf2ea02e1481f9f9a657709c3a4aa9520a96ca16403cf54144979e2c88a07b83af660c05559d56b7ecd7142f  fix-buildsystem-race.patch
+17011a54f47c2c5ef53ac6df1e172470f9174f6b44432d3aea988c9353b16874f5b26f7ff10ace1a85985ad51575796d4f27c97a437fe7b77a171934882c537f  hurd-console.initd
+"

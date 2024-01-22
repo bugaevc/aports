@@ -1,0 +1,63 @@
+# Contributor: me <me@example.com>
+# Maintainer: me <mw@example.com>
+pkgname=mig
+pkgver=1.8_git20231203
+pkgrel=0
+pkgdesc="Mach Interface Generator"
+url="https://www.gnu.org/software/hurd/microkernel/mach/mig.html"
+arch="all"
+license="GPL-2.0-or-later"
+
+[ "$CHOST" != "$CTARGET" ] && _target="-$CTARGET_ARCH" || _target=""
+pkgname="$pkgname$_target"
+
+makedepends_build="autoconf automake bison flex"
+# There's not much point in using MIG without Mach headers, either.
+# If it's not a cross-compiler, make it pull gnumach-dev.
+[ "$CHOST" = "$CTARGET" ] && depends="gnumach-dev"
+
+# makedepends_target doesn't exist, hence the following workaround.
+if [ "$CBUILD" = "$CHOST" ] && [ "$CHOST" != "$CTARGET" ]; then
+	calcdeps() {
+		builddeps="$makedepends_build $makedepends_host $EXTRADEPENDS_BUILD $EXTRADEPENDS_HOST"
+		hostdeps="gnumach-dev $EXTRADEPENDS_TARGET"
+	}
+fi
+
+_commit=a6a6afc285f8f4a1aadc8857ac980b62010ce004
+
+source="http://git.savannah.gnu.org/cgit/hurd/mig.git/snapshot/mig-$_commit.tar.gz"
+builddir="$srcdir/mig-$_commit"
+
+prepare() {
+	default_prepare
+	autoreconf -vif
+}
+
+build() {
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--target=$CTARGET \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--mandir=/usr/share/man \
+		--localstatedir=/var
+	make
+}
+
+check() {
+	# The tests don't quite work until we have glibc.
+	if [ "$BOOTSTRAP" = nobase ]; then
+		return 0
+	fi
+	make check
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+ffebcc28a009e0855b17fe7a99f4da6fcda39f5b19dc59aceb1d622881a041247ee88b4e00ffc72be43f3284f55478a43175008bc28511eab4cd28aaee33ae3b  mig-a6a6afc285f8f4a1aadc8857ac980b62010ce004.tar.gz
+"

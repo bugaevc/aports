@@ -1,0 +1,257 @@
+# Contributor: me <me@example.com>
+# Maintainer: me <me@example.com>
+pkgname=glibc
+pkgver=2.38
+pkgrel=0
+pkgdesc="The GNU C Library (glibc)"
+url="https://www.gnu.org/software/libc/"
+arch="all"
+license="lgplv2"
+
+source="https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz
+	ld.so.conf nscd.initd
+	ldd-sh.patch
+	shlib-versions.patch
+	util-libs-in-usr-lib.patch
+	auto-link-in-libmachuser-libhurduser.patch
+	"
+builddir="$srcdir/$pkgname-$pkgver"
+
+makedepends_build="gawk bison perl bash grep python3>=3.4"
+
+case "$CKERNEL" in
+hurd)
+	_kernel_headers="gnumach-dev hurd-dev"
+	_libc_a_name="libcrt"
+	;;
+linux)
+	_kernel_headers="linux-headers>=3.2"
+	_libc_a_name="libc"
+	;;
+*)
+	error "Don't know how to handle kernel $CKERNEL"
+	return 1
+	;;
+esac
+makedepends_host="$_kernel_headers"
+
+if [ "$CKERNEL" = hurd ] ; then
+	if [ "$CBUILD" != "$CHOST" ] ; then
+		makedepends_build="$makedepends_build mig-$(hostspec_to_arch $CHOST)"
+	else
+		makedepends_build="$makedepends_build mig"
+	fi
+fi
+provides="libucontext=1.2 gcompat=1.1.0 musl-obstack=1.2.3 libc6-compat"
+
+_has_libmvec() {
+	case "$CHOST" in
+	x86_64* | aarch64*)
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+subpackages="
+	$pkgname-dbg
+	$pkgname-gconv
+	"
+if _has_libmvec; then
+	subpackages="$subpackages $pkgname-mvec"
+fi
+subpackages="$subpackages
+	$pkgname-lang
+	$pkgname-doc
+	$pkgname-nscd
+	$pkgname-nscd-openrc:nscd_openrc
+	$pkgname-utils
+	$pkgname-nss-extras:nss_extras
+	$pkgname-static
+	$pkgname-dev
+	"
+
+case "$BOOTSTRAP" in
+nolibgcc)
+	pkgname="glibc-dev"
+	subpackages=""
+	depends="$makedepends_host"
+	;;
+*)
+	makedepends_build="$makedepends_build texinfo"
+	# glibc dlopen's libgcc_s.so.1 at runtime in some cases
+	depends="so:libgcc_s.so.1"
+	depends_dev="$_kernel_headers"
+	triggers="$pkgname-utils.trigger=/lib:/usr/lib"
+	;;
+esac
+
+build() {
+	local _headers_configure=
+	local _cet_configure=
+	case "$CKERNEL" in
+	linux)
+		mkdir linux-include
+		ln -s "$CBUILDROOT"/usr/include/asm-generic linux-include/asm-generic
+		ln -s "$CBUILDROOT"/usr/include/asm linux-include/asm
+		ln -s "$CBUILDROOT"/usr/include/linux linux-include/linux
+		_headers_configure="--with-headers=$builddir/linux-include"
+		_cet_configure="--enable-cet"
+		;;
+	hurd)
+		# This is unfortunate, and shoould be dropped once glibc is fixed.
+		export CFLAGS="$(echo $CFLAGS | sed s/-Os/-O2/g)"
+		export CPPFLAGS="$(echo $CPPFLAGS | sed s/-Os/-O2/g)"
+		;;
+	*)
+		error "Don't know how to handle kernel $CKERNEL"
+		return 1
+		;;
+	esac
+
+	mkdir build
+	cd build
+	CFLAGS="$CFLAGS -Wno-error=attribute-alias"
+	echo 'slibdir = /lib' >> configparms
+	echo 'rtlddir = /lib' >> configparms
+	../configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr \
+		--libdir=/usr/lib \
+		--sysconfdir=/etc \
+		--mandir=/usr/share/man \
+		$_headers_configure \
+		--with-pkgversion="GNU libc for glibc-based build of Alpine" \
+		--localstatedir=/var \
+		--enable-bind-now \
+		$_cet_configure \
+		--disable-fortify-source
+
+	if [ "$BOOTSTRAP" = "nolibgcc" ]; then
+		make csu/subdir_lib
+	else
+		make
+	fi
+	cd ..
+}
+
+check() {
+	echo yolo lol
+}
+
+package() {
+	if [ "$BOOTSTRAP" = "nolibgcc" ]; then
+		make -C build DESTDIR="$pkgdir" install-headers
+		mkdir -p "$pkgdir"/usr/include/gnu "$pkgdir"/usr/lib
+		touch "$pkgdir"/usr/include/gnu/stubs.h "$pkgdir"/usr/lib/libc.so
+		install build/csu/crt*.o "$pkgdir"/usr/lib/
+	else
+		make -C build DESTDIR="$pkgdir" install
+		unlink "$pkgdir"/usr/bin/ld.so
+		unlink "$pkgdir"/sbin/sln
+	fi
+}
+
+gconv() {
+	pkgdesc="$pkgname gconv modules"
+	depends="$pkgname=$pkgver-r$pkgrel"
+	amove usr/lib/gconv
+}
+
+mvec() {
+	pkgdesc="$pkgname vector math library (used by OpenMP)"
+	depends="$pkgname=$pkgver-r$pkgrel"
+	amove lib/libmvec.so.1
+}
+
+lang() {
+	default_lang
+	amove usr/share/i18n
+}
+
+nscd() {
+	pkgdesc="$pkgdesc name service cache daemon"
+	depends="$pkgname=$pkgver-r$pkgrel"
+	amove usr/sbin/nscd
+}
+
+nscd_openrc() {
+	depends="$pkgname-nscd"
+	pkgdesc="$pkgname name service cache daemon (OpenRC init scripts)"
+	install_if="openrc $pkgname-nscd=$pkgver-r$pkgrel"
+	install -Dm 755 "$srcdir"/nscd.initd "$subpkgdir"/etc/init.d/nscd
+}
+
+utils() {
+	amove usr/bin usr/sbin usr/libexec/getconf
+	mkdir -p "$subpkgdir"/usr/lib/
+	mv -v "$pkgdir"/lib/libmemusage.so "$pkgdir"/lib/libpcprofile.so "$subpkgdir"/usr/lib/
+}
+
+nss_extras() {
+	pkgdesc="$pkgname extra name service modules"
+	depends="$pkgname=$pkgver-r$pkgrel"
+	mkdir -p "$subpkgdir"/usr/lib/
+	mv -v "$pkgdir"/lib/libnss_hesiod.so.2 "$pkgdir"/lib/libnss_compat.so.2 "$subpkgdir"/usr/lib/
+	rm "$pkgdir"/usr/lib/libnss_*.so
+}
+
+static() {
+	default_static
+
+	# We want to put libc_nonshared.a into glibc-dev, not glibc-static, so move it
+	# back into the main package for now. The same goes for libXYZ.a listed below,
+	# which are empty placeholders intended to keep '-lXYZ' working.
+	mv -v "$subpkgdir"/usr/lib/"$_libc_a_name"_nonshared.a "$pkgdir"/usr/lib/
+	mv -v "$subpkgdir"/usr/lib/libdl.a "$pkgdir"/usr/lib/
+	mv -v "$subpkgdir"/usr/lib/libg.a "$pkgdir"/usr/lib/
+	mv -v "$subpkgdir"/usr/lib/libutil.a "$pkgdir"/usr/lib/
+
+	if [ "$CKERNEL" = linux ]; then
+		mv -v "$subpkgdir"/usr/lib/librt.a "$pkgdir"/usr/lib/
+		mv -v "$subpkgdir"/usr/lib/libpthread.a "$pkgdir"/usr/lib/
+	fi
+
+	# This one is not empty, but still belongs in glibc-dev
+	mv -v "$subpkgdir"/usr/lib/libmcheck.a "$pkgdir"/usr/lib/
+}
+
+dev() {
+	mkdir -p "$subpkgdir"/usr/lib/
+
+	rm "$pkgdir"/usr/lib/libc_malloc_debug.so
+	mv -v "$pkgdir"/lib/libc_malloc_debug.so.0 "$subpkgdir"/usr/lib/
+	ln -s libc_malloc_debug.so.0 "$subpkgdir"/usr/lib/libc_malloc_debug.so
+
+	if [ "$CKERNEL" = linux ]; then
+		rm "$pkgdir"/usr/lib/libthread_db.so
+		mv -v "$pkgdir"/lib/libthread_db.so.1 "$subpkgdir"/usr/lib/
+		ln -s libthread_db.so.1 "$subpkgdir"/usr/lib/libthread_db.so
+	fi
+
+	# Some of these are linker scripts, which default_dev does not handle.
+	amove usr/lib/*.so
+	amove usr/lib/"$_libc_a_name"_nonshared.a
+	amove usr/lib/libdl.a usr/lib/libg.a usr/lib/libmcheck.a usr/lib/libutil.a
+	if [ "$CKERNEL" = linux ]; then
+		amove usr/lib/libpthread.a usr/lib/librt.a
+	fi
+	default_dev
+	if _has_libmvec; then
+		depends="$depends $pkgname-mvec"
+	fi
+	provides="$provides libucontext-dev=1.2 musl-obstack-dev=1.2.3 fortify-headers=1.1"
+}
+
+sha512sums="
+ca799ef40129433791777c698b62142edf0f0e8a87552f324ee6a036a2fe747b867696863692bde45bdd4a263ac6c419a52f92c1b6072b8ff49a887ebaa45299  glibc-2.38.tar.gz
+651b25d6c84cbb35c84ea4896172590dbe40029e0a8f338fd6d3d59f1a3b3b8e52fe2948e8d997e69439feb7db938ffbf96a54526c35ff300b9e3650ff57ebf8  ld.so.conf
+7f5ce30bcb1cbe2449289b226c334efae5db52e894506ca3f7293c58398d5289c196823514f9960d58150841117bc190b096b3807db491557a709222d6cfaa17  nscd.initd
+b750389248daa9fe591829703bdae1b38eb9634bd9082585778114909db95f355a7b0a195680fb2263b9c9e3367928a435d830e3113860a6c938a9cfbd229181  ldd-sh.patch
+567ead508d879c09d8bda19be651c3bf5bce1b738eb7d279f3fd3ccb0c45718c8aa0432e884ccf01a8b4e2c4cc554803e32562c58bb1f796874136c199c30e06  shlib-versions.patch
+4fff18b9cb8da4e9b3552ae822c49c1723b65f147cc6e112dac0d8835aeb0080d0c350be77bf8cca6817c1ee0aa3ad971900517f8a0aa11db193acb9125e8971  util-libs-in-usr-lib.patch
+52a8061112b83776951ea5ecf2215bb66597e1fe811aef0b9cdcb5ff7fba6df9e149619f216d150b3442f584b41a9b47217cb00c1c3d81830287139edc8e12b5  auto-link-in-libmachuser-libhurduser.patch
+"

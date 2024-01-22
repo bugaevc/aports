@@ -1,0 +1,36 @@
+--- a/Makeconf
++++ b/Makeconf
+@@ -219,7 +219,7 @@
+ 
+ # Standard targets
+ 
+-.PHONY: all install libs relink dist-hook clean objs
++.PHONY: all install libs relink dist-hook clean objs install-local-headers
+ 
+ # Just build all the object files.
+ objs: $(OBJS)
+@@ -271,6 +271,8 @@
+ # Make sure we make those before compiling, since -MG will be unhelpful.
+ $(patsubst %.o,%.d,$(filter %.o,$(OBJS))): $(INSTALLED_LOCAL_HEADERS)
+ 
++install-local-headers: $(INSTALLED_LOCAL_HEADERS)
++
+ # The installed local headers referring to our own files will use
+ # relative names with ../$(dir) and make won't notice that's us.
+ ../$(dir)/%: % ;
+--- b/Makefile
++++ b/Makefile
+@@ -258,9 +258,12 @@
+ 	gzip -9n < $< > $@
+ 
+ ## Targets used by the main targets above.
+-$(prog-subdirs) $(lib-subdirs): FORCE
++$(prog-subdirs) $(lib-subdirs): FORCE $(addsuffix -install-local-headers,$(lib-subdirs))
+ 	$(MAKE) -C $@ all
+ FORCE:
++
++%-install-local-headers:
++	$(MAKE) -C $* install-local-headers no_deps=t
+ 
+ %-clean:
+ 	$(MAKE) -C $* clean no_deps=t
