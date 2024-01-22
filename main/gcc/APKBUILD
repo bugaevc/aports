@@ -7,7 +7,11 @@ pkgver=13.2.1_git20231014
 _pkgbase="${pkgver%%_git*}"
 # date component from snapshots
 _pkgsnap="${pkgver##*_git}"
-[ "$BOOTSTRAP" = "nolibc" ] && pkgname="gcc-pass2"
+
+case "$BOOTSTRAP" in
+nolibc)			pkgname="gcc-pass2";;
+nolibc-pass3)		pkgname="gcc-pass3";;
+esac
 [ "$CBUILD" != "$CHOST" ] && _cross="-$CARCH" || _cross=""
 [ "$CHOST" != "$CTARGET" ] && _target="-$CTARGET_ARCH" || _target=""
 
@@ -20,7 +24,7 @@ license="GPL-2.0-or-later AND LGPL-2.1-or-later"
 _gccrel=$pkgver-r$pkgrel
 depends="binutils$_target"
 makedepends_build="gcc$_cross g++$_cross bison flex texinfo gawk zip gmp-dev mpfr-dev mpc1-dev zlib-dev"
-makedepends_host="linux-headers gmp-dev mpfr-dev mpc1-dev isl-dev zlib-dev !gettext-dev libucontext-dev"
+makedepends_host="gmp-dev mpfr-dev mpc1-dev isl-dev zlib-dev !gettext-dev libucontext-dev"
 subpackages=" "
 [ "$CHOST" = "$CTARGET" ] && subpackages="gcc-gdb gcc-doc$_target"
 replaces="libstdc++ binutils"
@@ -40,14 +44,22 @@ _libatomic=true
 _libitm=true
 
 if [ "$CHOST" != "$CTARGET" ]; then
-	if [ "$BOOTSTRAP" = nolibc ]; then
+	case "$BOOTSTRAP" in
+	nolibc)
 		LANG_CXX=false
 		LANG_ADA=false
 		_libgcc=false
 		_builddir="$srcdir/build-cross-pass2"
-	else
+		;;
+	nolibc-pass3)
+		LANG_CXX=false
+		_builddir="$srcdir/build-cross-pass3"
+		;;
+	*)
+		LANG_ADA=false
 		_builddir="$srcdir/build-cross-final"
-	fi
+		;;
+	esac
 	LANG_OBJC=false
 	LANG_GO=false
 	LANG_FORTRAN=false
@@ -249,7 +261,35 @@ source="https://dev.alpinelinux.org/archive/gcc/${_pkgbase%%.*}-$_pkgsnap/gcc-${
 	0033-libphobos-do-not-use-LFS64-symbols.patch
 	0034-libgo-fix-lfs64-use.patch
 	0036-PR110792-Early-clobber-issues-with-rot32di2-on-i386.patch
+	glibc-disable-lib64.patch
+	hurd-usr-include.patch
+	hurd-fix-pie.patch
 	"
+
+_skip_patches=
+case "$CTARGET_LIBC" in
+glibc)
+	_skip_patches="
+	0016-add-fortify-headers-paths.patch
+	0017-Alpine-musl-package-provides-libssp_nonshared.a.-We-.patch
+	0025-ada-libgnarl-compatibility-for-musl.patch
+	0026-ada-musl-support-fixes.patch
+	0029-libstdc-do-not-throw-exceptions-for-non-C-locales-on.patch
+	0031-druntime-link-against-libucontext-on-all-platforms.patch
+	0032-libgnat-time_t-is-always-64-bit-on-musl-libc.patch
+	0033-libphobos-do-not-use-LFS64-symbols.patch
+	0034-libgo-fix-lfs64-use.patch
+	"
+	;;
+esac
+case "$CTARGET_KERNEL" in
+hurd)
+	_skip_patches="
+	$_skip_patches
+	0007-Enable-Wtrampolines-by-default.patch
+	"
+	;;
+esac
 
 # secfixes:
 #   13.2.1_git20231014-r0:
@@ -267,6 +307,10 @@ prepare() {
 	for i in $source; do
 		case "$i" in
 		*.patch)
+			if list_has "$i" $_skip_patches; then
+				msg "Skipping $i on this target"
+				continue
+			fi
 			msg "Applying $i"
 			patch -p1 -i "$srcdir"/$i || _err="$_err $i"
 			;;
@@ -323,6 +367,10 @@ build() {
 		_libc_configure="--disable-libssp --disable-libsanitizer"
 		_symvers="--disable-symvers"
 		export libat_cv_have_ifunc=no
+		;;
+	glibc)
+		# Let's not support the old ABI.
+		_libc_configure="--disable-libstdcxx-dual-abi --with-default-libstdcxx-abi=new"
 		;;
 	esac
 
@@ -391,7 +439,14 @@ build() {
 		--with-pkgversion="$version"
 
 	msg "building gcc"
-	make
+	case "$BOOTSTRAP" in
+	nolibc)
+		make all-gcc ;;
+	nolibc-pass3)
+		make all-gcc all-target-libgcc ;;
+	*)
+		make ;;
+	esac
 
 	# we build gccjit separate to not build all of gcc with --enable-host-shared
 	# as doing so slows it down a few %, so for some quick if's here we gain
@@ -412,7 +467,18 @@ build() {
 
 package() {
 	cd "$_builddir"
-	make -j1 DESTDIR="$pkgdir" install
+	case "$BOOTSTRAP" in
+	nolibc)
+		make -j1 DESTDIR="$pkgdir" install-gcc
+		# See the note at https://www.linuxfromscratch.org/lfs/view/development/chapter05/gcc-pass1.html
+		cat "$_gccdir"/gcc/limitx.h "$_gccdir"/gcc/glimits.h "$_gccdir"/gcc/limity.h > "$pkgdir"/"$_gcclibdir"/include/limits.h
+		;;
+	nolibc-pass3)
+		make -j1 DESTDIR="$pkgdir" install-gcc install-target-libgcc
+		;;
+	*)
+		make -j1 DESTDIR="$pkgdir" install ;;
+	esac
 
 	ln -s gcc "$pkgdir"/usr/bin/cc
 	ln -s ${CTARGET}-gcc "$pkgdir"/usr/bin/${CTARGET}-cc
@@ -558,7 +624,10 @@ libcxx_dev() {
 
 gpp() {
 	pkgdesc="GNU C++ standard library and compiler"
-	depends="libstdc++=$_gccrel libstdc++-dev$_target=$_gccrel gcc$_target=$_gccrel libc-dev"
+	depends="libstdc++-dev$_target=$_gccrel gcc$_target=$_gccrel"
+	if [ "$CHOST" = "$CTARGET" ]; then
+		depends="$depends libstdc++=$_gccrel libc-dev"
+	fi
 	mkdir -p "$subpkgdir/$_gcclibexec" \
 		"$subpkgdir"/usr/bin \
 		"$subpkgdir"/usr/${_target:+$CTARGET/}include \
@@ -592,7 +661,11 @@ libobjc() {
 objc() {
 	pkgdesc="GNU Objective-C"
 	replaces="gcc"
-	depends="libc-dev gcc=$_gccrel libobjc=$_gccrel"
+	depends="gcc=$_gccrel"
+
+	if [ "$CHOST" = "$CTARGET" ]; then
+		depends="$depends libc-dev libobjc=$_gccrel"
+	fi
 
 	mkdir -p "$subpkgdir/$_gcclibexec" \
 		"$subpkgdir"/$_gcclibdir/include \
@@ -631,9 +704,13 @@ libgphobos() {
 
 gdc() {
 	pkgdesc="GCC-based D language compiler"
-	depends="gcc=$_gccrel libgphobos=$_gccrel musl-dev"
+	depends="gcc=$_gccrel"
 	depends="$depends libucontext-dev"
 	provides="gcc-gdc-bootstrap=$_gccrel"
+
+	if [ "$CHOST" = "$CTARGET" ]; then
+		depends="$depends libgphobos=$_gccrel libc-dev"
+	fi
 
 	mkdir -p "$subpkgdir/$_gcclibexec" \
 		"$subpkgdir"/$_gcclibdir/include/d/ \
@@ -663,8 +740,12 @@ libgo() {
 
 go() {
 	pkgdesc="GCC Go frontend (intended for bootstrapping community/go)"
-	depends="gcc=$_gccrel libgo=$_gccrel !go"
+	depends="gcc=$_gccrel !go"
 	install="$pkgname-go.post-install"
+
+	if [ "$CHOST" = "$CTARGET"]; then
+		depends="$depends libgo=$_gccrel"
+	fi
 
 	# See https://lists.alpinelinux.org/~alpine/devel/%3C33KG0XO61I4IL.2Z7RTAZ5J3SY6%408pit.net%3E
 	provides="go-bootstrap"
@@ -708,9 +789,13 @@ libquadmath() {
 
 gfortran() {
 	pkgdesc="GNU Fortran Compiler"
-	depends="gcc=$_gccrel libgfortran=$_gccrel"
+	depends="gcc=$_gccrel"
 	$_libquadmath && depends="$depends libquadmath=$_gccrel"
 	replaces="gcc"
+
+	if [ "$CHOST" = "$CTARGET" ]; then
+		depends="$depends libgfortran=$_gccrel"
+	fi
 
 	mkdir -p "$subpkgdir"/$_gcclibexec \
 		"$subpkgdir"/$_gcclibdir \
@@ -806,4 +891,7 @@ b325035cb7122d79c6b42ca6d3fc9e02319ed2f7cddb0639dff25d2798d2ce63812cd623462cdf95
 c474f34e6f9a4239d486a65141a133dbe8ce91427d502a57a9fd6eb403478a2b5715ba74f24c1cc0761e16eec77ba2c1ca921fb7d7bc1e040fc3703fc9559e75  0033-libphobos-do-not-use-LFS64-symbols.patch
 c4482ffc36e7894b2140800159f4cbc9a3e9011e43a69b69f4fa92d5a11e2ee645c7e21df4423dd1e0636e8890849a5719647bfbdf84f951d638f8f488cb718c  0034-libgo-fix-lfs64-use.patch
 cc1e10ac6e72db816f09325e301103109cc212a6f3de3ce0b9b038d149233c467319d203941695dbf3d7b9e2dcbbcd17609cdb056e831fcc323cd592423882d8  0036-PR110792-Early-clobber-issues-with-rot32di2-on-i386.patch
+7c0af9a5eba7e6e40099a6deb8c3adc13850def412c8f72fbe39a46a216f1c119069d654cf7b6c54202d9fcf999710411345b7500377ffca4813866a6e6d10ac  glibc-disable-lib64.patch
+a81e0568095bfb92337875c1f9971e820c7711d78671e1efbaff252feba7ec4528c133eb65561fff882f0af9f593762d5a020e908bb95ada8ffc01be9755738c  hurd-usr-include.patch
+7b4cf7724c3b868082d823694f2c231bfe43f055feb57c3be2870424ab7e17d51b4ed7bd76870f527da2dac7443b1c1e13f46fa299f1d4770c474bb8b441092d  hurd-fix-pie.patch
 "

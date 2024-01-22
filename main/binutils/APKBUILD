@@ -13,6 +13,8 @@ subpackages="$pkgname-dev $pkgname-doc"
 source="https://ftp.gnu.org/gnu/binutils/binutils-$pkgver.tar.xz
 	0001-Revert-PR25882-.gnu.attributes-are-not-checked-for-s.patch
 	binutils-ld-fix-static-linking.patch
+	disable-libpath-suffix.patch
+	0002-poison-system-directories.patch
 	"
 builddir="$srcdir/$pkgname-$pkgver"
 options="!check"
@@ -74,6 +76,10 @@ build() {
 
 	if [ "$CTARGET_ARCH" = "riscv64" ]; then
 		_gold_configure="--disable-gold"
+	fi
+
+	if [ "$CHOST" != "$CTARGET" ]; then
+		_arch_configure="$_arch_configure --enable-poison-system-directories"
 	fi
 
 	CFLAGS="$CFLAGS -O2" \
@@ -142,4 +148,6 @@ sha512sums="
 5df45d0bd6ddabdce4f35878c041e46a92deef01e7dea5facc97fd65cc06b59abc6fba0eb454b68e571c7e14038dc823fe7f2263843e6e627b7444eaf0fe9374  binutils-2.41.tar.xz
 70ec22bd72ef6dddecfd970613387dd4a8cdc8730dd3cbf03d5a0c3a7c4d839383167bb06dad21bf7c235329fd44b5dc4aefe762f68544f17155cf002bf1be4a  0001-Revert-PR25882-.gnu.attributes-are-not-checked-for-s.patch
 ecee33b0e435aa704af1c334e560f201638ff79e199aa11ed78a72f7c9b46f85fbb227af5748e735fd681d1965fcc42ac81b0c8824e540430ce0c706c81e8b49  binutils-ld-fix-static-linking.patch
+d07a0301b7d01554b1a79a49725ee2222d1520c346ef1f8fe0260aabf6fe52749610f7f52651d81c34f0c83f115531cdf9063ffb69ab6ce3f92a3407a58fb4e2  disable-libpath-suffix.patch
+d9fbc3fa43106bd159550672d8b073e6fa050f7bc90d170d5ac74cd4ebb1f51603bc875541f10d317abd6d1f918bd7f57ef73097c16bde312a4dadbc3a49576b  0002-poison-system-directories.patch
 "

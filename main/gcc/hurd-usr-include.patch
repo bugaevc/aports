@@ -1,0 +1,13 @@
+We still want /usr/include on the Hurd.
+
+--- gcc/gcc/config.gcc
++++ gcc-patched/gcc/config.gcc
+@@ -855,7 +855,7 @@
+     *-*-linux* | frv-*-*linux* | *-*-kfreebsd*-gnu | *-*-kopensolaris*-gnu)
+       :;;
+     *-*-gnu*)
+-      native_system_header_dir=/include
++      # native_system_header_dir=/include
+       ;;
+   esac
+   # Linux C libraries selection switch: glibc / uclibc / bionic.

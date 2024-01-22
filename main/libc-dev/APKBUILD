@@ -19,6 +19,8 @@ source="sys-cdefs.h
 	sgidefs.h
 	"
 
+[ "$CLIBC" = glibc ] && depends="$depends libxcrypt-dev"
+
 prepare() {
 	mkdir -p "$builddir"
 }

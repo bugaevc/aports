@@ -41,6 +41,8 @@ CBUILDROOT="$(CTARGET=$TARGET_ARCH . /usr/share/abuild/functions.sh ; echo $CBUI
 . /usr/share/abuild/functions.sh
 [ -z "$CBUILD_ARCH" ] && die "abuild is too old (use 2.29.0 or later)"
 [ -z "$CBUILDROOT" ] && die "CBUILDROOT not set for $TARGET_ARCH"
+TARGET_LIBC=$(hostspec_to_libc $(arch_to_hostspec $TARGET_ARCH))
+TARGET_KERNEL=$(hostspec_to_kernel $(arch_to_hostspec $TARGET_ARCH))
 export CBUILD
 
 # deduce aports directory
@@ -79,22 +81,83 @@ msg "Building cross-compiler"
 # Build and install cross binutils (--with-sysroot)
 CTARGET=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname binutils) abuild -r
 
-if ! CHOST=$TARGET_ARCH BOOTSTRAP=nolibc APKBUILD=$(apkbuildname musl) abuild up2date 2>/dev/null; then
-	# C-library headers for target
-	CHOST=$TARGET_ARCH BOOTSTRAP=nocc APKBUILD=$(apkbuildname musl) abuild -r
+case "$TARGET_LIBC" in
+musl)
+	if ! CHOST=$TARGET_ARCH BOOTSTRAP=nolibc APKBUILD=$(apkbuildname musl) abuild up2date 2>/dev/null; then
+		# C-library headers for target
+		CHOST=$TARGET_ARCH BOOTSTRAP=nocc APKBUILD=$(apkbuildname musl) abuild -r
+
+		# Minimal cross GCC
+		EXTRADEPENDS_HOST="musl-dev" \
+		CTARGET=$TARGET_ARCH BOOTSTRAP=nolibc APKBUILD=$(apkbuildname gcc) abuild -r
+
+		# Cross build bootstrap C-library for the target
+		EXTRADEPENDS_BUILD="gcc-pass2-$TARGET_ARCH" \
+		CHOST=$TARGET_ARCH BOOTSTRAP=nolibc APKBUILD=$(apkbuildname musl) abuild -r
+	fi
+
+	# Full cross GCC
+	EXTRADEPENDS_TARGET="musl musl-dev" \
+	CTARGET=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname gcc) abuild -r
+	;;
+
+glibc)
+	case "$TARGET_KERNEL" in
+	hurd)
+		# Mach headers (make install-data)
+		CHOST=$TARGET_ARCH BOOTSTRAP=nocc APKBUILD=$(apkbuildname gnumach) abuild -r
+		;;
+	linux)
+		# Linux headers
+		CHOST=$TARGET_ARCH BOOTSTRAP=nocc APKBUILD=$(apkbuildname linux-headers) abuild -r
+		;;
+	*)
+		msg "Don't know how to build this kernel"
+		return 1
+		;;
+	esac
 
 	# Minimal cross GCC
-	EXTRADEPENDS_HOST="musl-dev" \
 	CTARGET=$TARGET_ARCH BOOTSTRAP=nolibc APKBUILD=$(apkbuildname gcc) abuild -r
 
-	# Cross build bootstrap C-library for the target
-	EXTRADEPENDS_BUILD="gcc-pass2-$TARGET_ARCH" \
-	CHOST=$TARGET_ARCH BOOTSTRAP=nolibc APKBUILD=$(apkbuildname musl) abuild -r
-fi
+	if [ "$TARGET_KERNEL" = hurd ]; then
+		# Cross MIG
+		EXTRADEPENDS_BUILD="gcc-pass2-$TARGET_ARCH" \
+		CTARGET=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname mig) abuild -r
 
-# Full cross GCC
-EXTRADEPENDS_TARGET="musl musl-dev" \
-CTARGET=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname gcc) abuild -r
+		# Hurd headers (make install-data)
+		CHOST=$TARGET_ARCH BOOTSTRAP=nocc APKBUILD=$(apkbuildname hurd) abuild -r
+	fi
+
+	# Minimal glibc headers (make install-headers) & stuff
+	EXTRADEPENDS_BUILD="gcc-pass2-$TARGET_ARCH" \
+	CHOST=$TARGET_ARCH BOOTSTRAP=nolibgcc APKBUILD=$(apkbuildname glibc) abuild -r
+
+	# A bit less minimal GCC, notably including libgcc
+	EXTRADEPENDS_TARGET="glibc-dev" \
+	CTARGET=$TARGET_ARCH BOOTSTRAP=nolibc-pass3 APKBUILD=$(apkbuildname gcc) abuild -r
+
+	# Full glibc
+	EXTRADEPENDS_BUILD="gcc-pass3-$TARGET_ARCH" \
+	CHOST=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname glibc) abuild -r
+
+	# libxcrypt
+	EXTRADEPENDS_BUILD="gcc-pass3-$TARGET_ARCH" \
+	CHOST=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname libxcrypt) abuild -r
+
+	# libc-dev (mostly a wrapper for glibc-dev)
+	CHOST=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname libc-dev) abuild -r
+
+	# Full cross GCC
+	EXTRADEPENDS_TARGET="glibc-dev glibc-static libxcrypt-dev" \
+	CTARGET=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname gcc) abuild -r
+	;;
+
+*)
+	msg "Don't know how to build this libc"
+	return 1
+	;;
+esac
 
 # Cross build-base
 CTARGET=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname build-base) abuild -r
@@ -102,7 +165,7 @@ CTARGET=$TARGET_ARCH BOOTSTRAP=nobase APKBUILD=$(apkbuildname build-base) abuild
 msg "Cross building base system"
 
 # Implicit dependencies for early targets
-EXTRADEPENDS_TARGET="libgcc libstdc++ musl-dev"
+EXTRADEPENDS_TARGET="libgcc libstdc++ libc-dev"
 
 # On a few architectures like riscv64 we need to account for
 # gcc requiring -ltomic to be set explicitly if a C[++]11 program
