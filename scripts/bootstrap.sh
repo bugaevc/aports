@@ -177,16 +177,43 @@ if [ "$TARGET_ARCH" = "riscv64" ]; then
 	NEEDS_LIBATOMIC="yes"
 fi
 
-for PKG in fortify-headers linux-headers musl libc-dev pkgconf zlib \
+# Maybe build a newer python3 for the host; we'll need it for the cross-build of python3.
+python3_package_version=$(
+    . $(apkbuildname python3)
+    echo "$pkgver-r$pkgrel"
+)
+if [ "$(apk info --description python3 | head -1)" != "python3-$python3_package_version description:" ]; then
+	APKBUILD=$(apkbuildname python3) abuild -r
+fi
+
+# The list of packages here (especially mis-indented ones) is temporary, until we have a more complete distro.
+
+for PKG in $TARGET_LIBC libc-dev pkgconf zlib \
 	   openssl ca-certificates libmd \
-	   gmp mpfr4 mpc1 isl26 libucontext zstd binutils gcc \
-	   libbsd busybox make \
+	   gmp mpfr4 mpc1 isl26 libucontext zstd busybox binutils gcc \
+	   libbsd busybox make gnumach \
+		bzip2 zlib ncurses readline bash file alpine-conf alpine-baselayout alpine-keys alpine-base \
+		attr acl tar libffi c-ares xz \
+		brotli libev nghttp2 libunistring libidn2 libpsl curl libssh2 openssh \
+		libdaemon util-linux libgpg-error libgcrypt \
+		hurd-stage1 parted lwip hurd-minimal \
+		mig openrc sqlite \
+		community/quilt \
+		apk-tools lddtree cunit nano libedit pcre2 \
+		ed grep patch build-base \
+		lzip pax-utils abuild \
+		popt json-c cunit libxml2 \
+		bluez-headers expat gdbm mpdecimal tcl tzdata python3 \
+		xorgproto libxau xcb-proto libxdmcp libpng \
+		wget \
+		grub \
 	   apk-tools file \
 	   libcap openrc alpine-conf alpine-baselayout alpine-keys alpine-base patch build-base \
 	   attr acl fakeroot tar \
 	   lzip abuild ncurses libedit openssh \
+	chrpath readline bash community/neofetch \
 	   libcap-ng util-linux libaio lvm2 popt xz \
-	   json-c argon2 cryptsetup kmod lddtree mkinitfs \
+	   json-c argon2 cryptsetup kmod lddtree \
 	   libffi \
 	   brotli libev c-ares cunit nghttp2 libidn2 curl \
 	   libssh2 \
@@ -195,6 +222,16 @@ for PKG in fortify-headers linux-headers musl libc-dev pkgconf zlib \
 
 	if [ "$NEEDS_LIBATOMIC" = "yes" ]; then
 		EXTRADEPENDS_BUILD="libatomic gcc-$TARGET_ARCH g++-$TARGET_ARCH"
+	fi
+	if [ "$PKG" = hurd-stage1 ]; then
+		EXTRADEPENDS_TARGET="$EXTRADEPENDS_TARGET"  EXTRADEPENDS_BUILD="$EXTRADEPENDS_BUILD" \
+		CHOST=$TARGET_ARCH BOOTSTRAP=stage1 APKBUILD=$(apkbuildname hurd) abuild -r
+		continue
+	fi
+	if [ "$PKG" = hurd-minimal ]; then
+		EXTRADEPENDS_TARGET="$EXTRADEPENDS_TARGET"  EXTRADEPENDS_BUILD="$EXTRADEPENDS_BUILD" \
+		CHOST=$TARGET_ARCH BOOTSTRAP=minimal APKBUILD=$(apkbuildname hurd) abuild -r
+		continue
 	fi
 	EXTRADEPENDS_TARGET="$EXTRADEPENDS_TARGET"  EXTRADEPENDS_BUILD="$EXTRADEPENDS_BUILD" \
 	CHOST=$TARGET_ARCH BOOTSTRAP=bootimage APKBUILD=$(apkbuildname $PKG) abuild -r
