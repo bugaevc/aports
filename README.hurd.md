@@ -31,4 +31,4 @@ $ doas apk --arch x86-hurd --repository ~/packages/main/ --root ~/sysroot-x86-hu
 
 try `glibc-utils`, `hurd`, `curl`, `apk-tools` packages for example.
 
-The first package that does not build is ~~`patch` (`PATH_MAX` errors)~~ `grep`.
+The first package that does not build is `grub`.

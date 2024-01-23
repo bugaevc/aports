@@ -191,7 +191,9 @@ for PKG in $TARGET_LIBC libc-dev pkgconf zlib \
 		mig openrc sqlite \
 		community/quilt \
 		apk-tools lddtree cunit nano libedit pcre2 \
-		ed grep patch \
+		ed grep patch build-base \
+		lzip pax-utils abuild \
+		popt json-c cunit libxml2 grub \
 	   apk-tools file \
 	   libcap openrc alpine-conf alpine-baselayout alpine-keys alpine-base patch build-base \
 	   attr acl fakeroot tar \

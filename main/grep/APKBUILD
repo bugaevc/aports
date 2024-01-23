@@ -14,7 +14,7 @@ subpackages="$pkgname-doc"
 source="https://mirrors.kernel.org/gnu/grep/grep-$pkgver.tar.xz"
 
 build() {
-	CFLAGS="$CFLAGS -flto=auto"\
+	[ "$CBUILD" = "$CHOST" ] && export CFLAGS="$CFLAGS -flto=auto"
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \
