@@ -20,6 +20,13 @@ source="https://www.iana.org/time-zones/repository/releases/tzcode$_tzcodever.ta
 	0002-fix-implicit-declaration-warnings-by-including-strin.patch
 	"
 
+if [ "$CBUILD" = "$CHOST" ]; then
+	ZIC=./zic
+else
+	ZIC=/usr/sbin/zic
+	makedepends_build="tzdata-utils"
+fi
+
 builddir="$srcdir"
 _timezones="africa antarctica asia australasia europe northamerica \
 	southamerica etcetera backward factory"
@@ -39,11 +46,11 @@ utils() {
 }
 
 package() {
-	./zic -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo $_timezones
-	./zic -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo/right -L leapseconds $_timezones
-	#./zic -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo/posix $_timezones
+	"$ZIC" -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo $_timezones
+	"$ZIC" -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo/right -L leapseconds $_timezones
+	# "$ZIC" -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo/posix $_timezones
 
-	./zic -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo -p America/New_York
+	"$ZIC" -b fat -y ./yearistype -d "$pkgdir"/usr/share/zoneinfo -p America/New_York
 	install -m444 -t "$pkgdir"/usr/share/zoneinfo iso3166.tab zone1970.tab zone.tab
 
 	mkdir -p "$pkgdir"/usr/sbin
