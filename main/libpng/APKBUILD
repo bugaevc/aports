@@ -7,7 +7,8 @@ pkgdesc="Portable Network Graphics library"
 url="http://www.libpng.org"
 arch="all"
 license="Libpng"
-makedepends="zlib-dev gawk autoconf automake libtool"
+makedepends_build="gawk autoconf automake libtool"
+makedepends_host="zlib-dev"
 subpackages="$pkgname-doc $pkgname-static $pkgname-dev $pkgname-utils"
 source="https://downloads.sourceforge.net/libpng/libpng-$pkgver.tar.gz
 	https://downloads.sourceforge.net/sourceforge/libpng-apng/libpng-1.6.39-apng.patch.gz
