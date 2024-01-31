@@ -8,9 +8,15 @@ options="checkroot !check" # attr.test fails with no error message
 url="https://savannah.nongnu.org/projects/attr"
 arch="all"
 license="LGPL-2.1-or-later"
+makedepends_build="autoconf automake libtool gettext-dev"
 checkdepends="perl"
 subpackages="$pkgname-static $pkgname-dev $pkgname-doc lib$pkgname:libs"
 source="https://download.savannah.nongnu.org/releases/attr/attr-$pkgver.tar.gz"
+
+prepare() {
+	default_prepare
+	autoreconf -vif
+}
 
 build() {
 	OPTIMIZER="$CFLAGS" \
