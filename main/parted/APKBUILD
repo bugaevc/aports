@@ -22,7 +22,7 @@ checkdepends="
 	perl
 	util-linux
 	"
-subpackages="$pkgname-dev $pkgname-doc"
+subpackages="$pkgname-static $pkgname-dev $pkgname-libs $pkgname-doc"
 source="https://ftp.gnu.org/gnu/parted/parted-$pkgver.tar.xz
 	fix-includes.patch
 	fix-libintl-header-s390x.patch
@@ -43,7 +43,7 @@ build() {
 		--prefix=/usr \
 		--enable-debug \
 		--disable-nls \
-		--disable-static \
+		--enable-static \
 		--enable-shared \
 		$_dm_configure
 	make
