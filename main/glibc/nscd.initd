@@ -1,0 +1,5 @@
+#!/sbin/openrc-run
+
+command="/usr/sbin/nscd"
+description="Name Service Cache daemon"
+pidfile="/var/run/nscd/nscd.pid"

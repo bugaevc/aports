@@ -1,0 +1,26 @@
+Make it possible to run ldconfig from a #! in a trigger "script",
+without glibc having to depends on /bin/sh (busybox).
+
+See glibc.trigger
+
+--- a/elf/ldconfig.c
++++ b/elf/ldconfig.c
+@@ -132,6 +132,7 @@
+   { NULL, 'l', NULL, 0, N_("Manually link individual libraries."), 0},
+   { "format", 'c', N_("FORMAT"), 0, N_("Format to use: new (default), old, or compat"), 0},
+   { "ignore-aux-cache", 'i', NULL, 0, N_("Ignore auxiliary cache file"), 0},
++  { "from-apk-trigger", 'J', NULL, OPTION_HIDDEN, NULL, 0 },
+   { NULL, 0, NULL, 0, NULL, 0 }
+ };
+ 
+@@ -196,6 +197,10 @@
+ 	opt_format = opt_format_compat;
+       else if (strcmp (arg, "new") == 0)
+ 	opt_format = opt_format_new;
++      break;
++    case 'J':
++      opt_link = 0;
++      state->next = state->argc;
+       break;
+     default:
+       return ARGP_ERR_UNKNOWN;
