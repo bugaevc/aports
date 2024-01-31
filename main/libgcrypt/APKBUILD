@@ -6,7 +6,8 @@ pkgdesc="General purpose crypto library based on the code used in GnuPG"
 url="https://www.gnupg.org/"
 arch="all"
 license="LGPL-2.1-or-later AND GPL-2.0-or-later"
-makedepends="libgpg-error-dev texinfo"
+makedepends_build="texinfo"
+makedepends_host="libgpg-error-dev"
 subpackages="$pkgname-static $pkgname-dev $pkgname-doc"
 source="https://www.gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-$pkgver.tar.bz2"
 
@@ -28,7 +29,8 @@ build() {
 		--sysconfdir=/etc \
 		--mandir=/usr/share/man \
 		--localstatedir=/var \
-		--enable-static
+		--enable-static \
+		--with-libgpg-error-prefix="$CBUILDROOT/usr"
 	make
 }
 
