@@ -16,7 +16,6 @@ makedepends_build="
 	autoconf
 	automake
 	libtool
-	linux-headers
 	"
 makedepends_host="$depends_dev"
 subpackages="
