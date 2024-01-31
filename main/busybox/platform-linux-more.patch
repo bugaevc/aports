@@ -1,0 +1,30 @@
+--- a/miscutils/inotifyd.c
++++ b/miscutils/inotifyd.c
+@@ -29,6 +29,7 @@
+ //config:config INOTIFYD
+ //config:	bool "inotifyd (3.6 kb)"
+ //config:	default n  # doesn't build on Knoppix 5
++//config:	depends on PLATFORM_LINUX
+ //config:	help
+ //config:	Simple inotify daemon. Reports filesystem changes. Requires
+ //config:	kernel >= 2.6.13
+--- a/networking/udhcp/d6_dhcpc.c
++++ b/networking/udhcp/d6_dhcpc.c
+@@ -10,6 +10,7 @@
+ //config:	bool "udhcpc6 (21 kb)"
+ //config:	default y
+ //config:	depends on FEATURE_IPV6
++//config:	depends on PLATFORM_LINUX
+ //config:	help
+ //config:	udhcpc6 is a DHCPv6 client
+ //config:
+--- a/util-linux/blockdev.c
++++ b/util-linux/blockdev.c
+@@ -8,6 +8,7 @@
+ //config:config BLOCKDEV
+ //config:	bool "blockdev (2.3 kb)"
+ //config:	default y
++//config:	depends on PLATFORM_LINUX
+ //config:	help
+ //config:	Performs some ioctls with block devices.
+ 

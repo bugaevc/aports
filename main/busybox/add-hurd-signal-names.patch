@@ -1,0 +1,18 @@
+--- a/libbb/u_signal_names.c
++++ b/libbb/u_signal_names.c
+@@ -135,6 +135,15 @@
+ #ifdef SIGSYS
+ 	[SIGSYS   ] = "SYS",
+ #endif
++#ifdef SIGEMT
++	[SIGEMT   ] = "EMT",
++#endif
++#ifdef SIGINFO
++	[SIGINFO  ] = "INFO",
++#endif
++#ifdef SIGLOST
++	[SIGLOST  ] = "LOST",
++#endif
+ #if ENABLE_FEATURE_RTMINMAX && !ENABLE_FEATURE_RTMINMAX_USE_LIBC_DEFINITIONS
+ # ifdef __SIGRTMIN
+ 	[__SIGRTMIN] = "RTMIN",

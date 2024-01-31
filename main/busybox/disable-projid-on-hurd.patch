@@ -1,0 +1,56 @@
+--- busybox-1.36.1/e2fsprogs/chattr.c
++++ busybox-1.36.1-patched/e2fsprogs/chattr.c
+@@ -186,6 +186,7 @@
+ 		}
+ 
+ 		if (gp->flags & OPT_SET_PROJ) {
++#ifdef __linux__
+ 			struct ext2_fsxattr fsxattr;
+ 			r = ioctl(fd, EXT2_IOC_FSGETXATTR, &fsxattr);
+ 			/* note: ^^^ may fail in 32-bit userspace on 64-bit kernel (seen on 4.12.0) */
+@@ -197,6 +198,7 @@
+ 				if (r != 0)
+ 					bb_perror_msg("setting %s on %s", "project ID", name);
+ 			}
++#endif
+ 		}
+ 
+ 		if (gp->flags & OPT_SET) {
+--- busybox-1.36.1/e2fsprogs/lsattr.c
++++ busybox-1.36.1-patched/e2fsprogs/lsattr.c
+@@ -60,12 +60,14 @@
+ 		return;
+ 
+ 	if (option_mask32 & OPT_PROJID) {
++#ifdef __linux__
+ 		struct ext2_fsxattr fsxattr;
+ 		r = ioctl(fd, EXT2_IOC_FSGETXATTR, &fsxattr);
+ 		/* note: ^^^ may fail in 32-bit userspace on 64-bit kernel (seen on 4.12.0) */
+ 		if (r != 0)
+ 			goto read_err;
+ 		printf("%5u ", (unsigned)fsxattr.fsx_projid);
++#endif
+ 	}
+ 
+ 	if (option_mask32 & OPT_GENERATION) {
+--- busybox-1.36.1/include/bb_e2fs_defs.h
++++ busybox-1.36.1-patched/include/bb_e2fs_defs.h
+@@ -196,6 +196,9 @@
+ #define EXT2_IOC_SETFLAGS		_IOW('f', 2, long)
+ #define EXT2_IOC_GETVERSION		_IOR('v', 1, long)
+ #define EXT2_IOC_SETVERSION		_IOW('v', 2, long)
++
++#ifdef __linux__
++
+ //NB: despite "long" in defs above, these ioctls use an _int_!
+ //passing them a pointer to long will read/write only int-sized data!
+ struct ext2_fsxattr {
+@@ -208,6 +211,8 @@
+ };
+ #define EXT2_IOC_FSGETXATTR		_IOR('X', 31, struct ext2_fsxattr)
+ #define EXT2_IOC_FSSETXATTR		_IOW('X', 32, struct ext2_fsxattr)
++
++#endif
+ 
+ /*
+  * Structure of an inode on the disk

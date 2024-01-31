@@ -21,8 +21,10 @@
 #define BBSUID_PATH "/bin/bbsuid"
 
 const static char * applets[] = {
+#ifdef __linux__
 	"/bin/mount",
 	"/bin/umount",
+#endif
 	"/bin/su",
 	"/usr/bin/crontab",
 	"/usr/bin/passwd",

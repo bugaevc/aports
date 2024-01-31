@@ -29,10 +29,10 @@ subpackages="
 	$pkgname-ifupdown::noarch
 	$pkgname-binsh::noarch
 	$pkgname-openrc
-	$pkgname-mdev-openrc:mdev_openrc
 	$pkgname-extras
 	$pkgname-extras-openrc:extras_openrc
 	"
+[ "$CKERNEL" = linux ] && subpackages="$subpackages $pkgname-mdev-openrc:mdev_openrc"
 options="suid net" # net needed for check()
 replaces="busybox-initscripts" # move of default.script
 triggers="busybox.trigger=/bin:/usr/bin:/sbin:/usr/sbin:/lib/modules/*"
@@ -83,6 +83,13 @@ source="https://busybox.net/downloads/busybox-$pkgver.tar.bz2
 	0032-install-Fix-chown-resetting-suid-sgid-bits-from-chmo.patch
 	0033-find-fix-xdev-depth-and-delete.patch
 	0034-udhcp-Avoid-leaking-uninitialized-stale-data.patch
+
+	platform-linux.patch
+	platform-linux-more.patch
+	disable-projid-on-hurd.patch
+	make-networking-build-on-hurd.patch
+	fix-undefined-symbol.patch
+	add-hurd-signal-names.patch
 
 	acpid.logrotate
 	busyboxconfig
@@ -173,6 +180,9 @@ build() {
 	[ "$CLIBC" = musl ] && sed -i \
 		-e "s/CONFIG_EXTRA_COMPAT=y/CONFIG_EXTRA_COMPAT=n/" \
 		.config
+	[ "$CKERNEL" = hurd ] && sed -i \
+		-e 's%CONFIG_UNAME_OSNAME="Linux"%CONFIG_UNAME_OSNAME="GNU/Hurd"%' \
+		.config
 	make -C "$builddir" O="$PWD" silentoldconfig
 	make CONFIG_EXTRA_CFLAGS="$_extra_cflags" CONFIG_EXTRA_LDLIBS="$_extra_libs"
 
@@ -182,6 +192,9 @@ build() {
 	cp "$_config_extras" .config
 	[ "$CLIBC" = musl ] && sed -i \
 		-e "s/CONFIG_EXTRA_COMPAT=y/CONFIG_EXTRA_COMPAT=n/" \
+		.config
+	[ "$CKERNEL" = hurd ] && sed -i \
+		-e 's%CONFIG_UNAME_OSNAME="Linux"%CONFIG_UNAME_OSNAME="GNU/Hurd"%' \
 		.config
 	make -C "$builddir" O="$PWD" silentoldconfig
 	make CONFIG_EXTRA_CFLAGS="$_extra_cflags" CONFIG_EXTRA_LDLIBS="$_extra_libs"
@@ -237,6 +250,7 @@ package() {
 	for file in *.initd ; do
 		install -D -m 0755 $file "$pkgdir"/etc/init.d/${file%%\.initd}
 	done
+	[ "$CKERNEL" = hurd ] && rm "$pkgdir"/etc/init.d/mdev
 
 	cd "$_dyndir"
 	install -m755 busybox "$pkgdir"/bin/busybox
@@ -252,7 +266,7 @@ package() {
 		"$pkgdir"/etc/network/if-up.d
 	install -m775 "$srcdir"/dad.if-up "$pkgdir"/etc/network/if-up.d/dad
 
-	install -Dm644 "$srcdir"/acpid.logrotate \
+	[ "$CKERNEL" != hurd ] && install -Dm644 "$srcdir"/acpid.logrotate \
 		"$pkgdir/etc/logrotate.d/acpid"
 
 	mkdir -p "$pkgdir"/var/lib/udhcpd
@@ -376,6 +390,12 @@ openrc() {
 	mkdir -p "$subpkgdir"/etc/acpi/PWRF
 	{ echo '#!/bin/sh' ; echo poweroff ; } > "$subpkgdir"/etc/acpi/PWRF/00000080
 	chmod 0755 "$subpkgdir"/etc/acpi/PWRF/00000080
+	if [ "$CKERNEL" = hurd ]; then
+		rm -r "$subpkgdir"/etc/acpi/
+		for srv in acpid watchdog loadkmap; do
+			rm "$subpkgdir"/etc/init.d/"$srv"
+		done
+	fi
 }
 
 mdev_openrc() {
@@ -427,10 +447,16 @@ f12c2d5cdb3a6b81f109029b22a6b1064a32aee5a2c5ff0b0a290f9090d5eda060b35f62f2faba33
 0d71e70ed3de87f11a8a94e00b26e74d437b7ae96292507f1d42c850f461a4ea9de28d19f4fbfee087042fa6b14362e7046618d5dd0833cfac96954002766a60  0032-install-Fix-chown-resetting-suid-sgid-bits-from-chmo.patch
 724cfa5dd9eba1b4de448d2e29762821492435e1687d5345b000309f8b38a20f735d57ee6e44c476add94ccb42dd01157d95b75c2da191d04e924dd6635992de  0033-find-fix-xdev-depth-and-delete.patch
 7e929e71b398502f91b429b29c43a93ac05d2281cd8b021a5398f4ecaedd8061c048833ecc8f012adade2a197de85f18cb12f9513867222ea17f0acb9e7d9161  0034-udhcp-Avoid-leaking-uninitialized-stale-data.patch
+fcd74443aff7a91edc2b049ccd56697e7736943f40a52245ccf3a4a5a23e779d513861d588169de4ede25e149c0cfbfcba0b75a22385dbd4498adfcb12ada8f9  platform-linux.patch
+b0daf7a2a78b5f508f04db58a59e8c4a4a1671a2235cbcfae440cd8c7050b477eee26ccf410380b409a85067d4a2419e3b7348f745ef7c6fed980925adcd9d5a  platform-linux-more.patch
+f3cca2dc523b15af69068aad9b813d085a8b1c7175d53dd5824cd4fdd565f736aa88bfe54fa9368490b0a9ec9a2263209441a1bd6bd81566ffe3c21c282b45a4  disable-projid-on-hurd.patch
+8d7c61703256a8482942b7c45c181802531e441a5c795d06d743d3b71ec1660d4e75887b2ca54b9b252764b42671cef73dc8d96e9fce1a70798b2b8dc25a53e6  make-networking-build-on-hurd.patch
+bf6cd811b364ab291539b9b4491fff4bef68f9a05d852661bbc5c7647a7006737f7720c17a079386db9d103c0b67e49f76ae0d033cedae81d9fd3621945825e7  fix-undefined-symbol.patch
+6eed52e058c54a838896ca663cefdf550ee2cf05a767c0d0911bce4a52cc9b9547d28e7a76b9196c5aa7835181306ad3626b7241f1d7ace9abb12e21f3ca2e5c  add-hurd-signal-names.patch
 aa93095e20de88730f526c6f463cef711b290b9582cdbd8c1ba2bd290019150cbeaa7007c2e15f0362d5b9315dd63f60511878f0ea05e893f4fdfb4a54af3fb1  acpid.logrotate
 076f13b9d85ebf23aff8c0a2f313d3ca05f4d1c0d3ed06b0bc274d41deda3bd4808a8381f7c0411e8188b67315cc7ac8dced1b4473cda3c247773dbce2b71f55  busyboxconfig
 cfd96023125ca27c6eddb13af490a36e5e7d2fcfd0847363e48f1fa5ce237e93e6a9fe4577feeb35291d79d6240ae5e6a518b9258966e0fac27e30a43172b792  busyboxconfig-extras
-0becc2186d6c32fb0c401cf7bc0e46268b38ce8892db33be1daf40273024c1c02d518283f44086a313a2ccef34230a1d945ec148cc173f26e6aa9d88a7426e54  bbsuid.c
+137c90d7be768d2ca64e48228709ce6e886ae41c1f965edce8247b0360176dcab88e2e72503468e83788f89cd253683c7945300080158b65da0619f620da0dce  bbsuid.c
 6321c1d96d8938a3b5eab21731de289ede136fff550f98127c509452bfb17769ccf94b118491f7b81d3c60e1bbb3e80bb07186e4ce07e29724a52f0daba9b218  dad.if-up
 26eac967d6cfe13b7dc973112de145543ac0bdda9e9dd3a69bbd8c133ae6a20387abe9377917efb770b191130d3a6385ff5738abc84a8216d7b86ae88b159260  ssl_client.c
 e56f9d74f7d471893ff9c3fde319b989e1854c9b12f06c1b6739694b07165ae256b5c555bc75c92986265df7f0a276001aba73853855c7a0fb3404a091a92c86  default.script
