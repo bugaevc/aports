@@ -22,7 +22,8 @@ subpackages="
 	$pkgname-gdbm
 	pyc:_pyc_meta:noarch
 	"
-makedepends="
+makedepends_build="!gettext-dev"
+makedepends_host="
 	!gettext-dev
 	bluez-headers
 	bzip2-dev
@@ -47,6 +48,10 @@ source="https://www.python.org/ftp/python/$pkgver/Python-$pkgver.tar.xz
 	"
 options="net" # Required for tests
 builddir="$srcdir/Python-$pkgver"
+
+if [ "$CBUILD" != "$CHOST" ]; then
+	makedepends_build="$makedepends_build $pkgname=$pkgver-r$pkgrel"
+fi
 
 # secfixes:
 #   3.11.5-r0:
@@ -95,6 +100,9 @@ build() {
 	# sometimes, but not recursion
 	local stacksize=0x200000
 
+	local _cross_flags=
+	[ "$CBUILD" != "$CHOST" ] && _cross_flags="--with-build-python=/usr/bin/python3"
+
 	# we want -O2 here for more speed for such a large interpreter.
 	export CFLAGS_NODIST="$CFLAGS -O2 -DTHREAD_STACK_SIZE=$stacksize"
 	export CXXFLAGS_NODIST="$CXXFLAGS -O2"
@@ -113,6 +121,11 @@ build() {
 	# we set them via NODIST to not propagate them and duplicate them to modules
 	unset LDFLAGS CFLAGS CXXFLAGS CPPFLAGS
 
+	if [ "$CBUILD" != "$CHOST" ]; then
+		export ac_cv_file__dev_ptc=no
+		export ac_cv_file__dev_ptmx=no
+	fi
+
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \
@@ -127,7 +140,8 @@ build() {
 		--with-system-expat \
 		--with-system-ffi \
 		--with-system-libmpdec \
-		--without-ensurepip
+		--without-ensurepip \
+		"$_cross_flags"
 
 	make
 }
