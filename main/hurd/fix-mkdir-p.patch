@@ -1,0 +1,21 @@
+--- a/libdiskfs/dir-mkdir.c
++++ b/libdiskfs/dir-mkdir.c
+@@ -33,8 +33,6 @@
+     return EOPNOTSUPP;
+ 
+   dnp = dircred->po->np;
+-  if (diskfs_check_readonly ())
+-    return EROFS;
+ 
+   pthread_mutex_lock (&dnp->lock);
+ 
+@@ -50,6 +48,9 @@
+       pthread_mutex_unlock (&dnp->lock);
+       return error;
+     }
++
++  if (diskfs_check_readonly ())
++    return EROFS;
+ 
+   mode &= ~(S_ISPARE | S_IFMT | S_ITRANS);
+   mode |= S_IFDIR;

@@ -1,0 +1,4 @@
+#! /bin/sh
+
+cd /dev
+/sbin/MAKEDEV --keep-all vcs tty1 tty2 tty3 tty4 tty5 tty6

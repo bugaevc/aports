@@ -1,0 +1,40 @@
+--- a/daemons/runsystem.sh
++++ b/daemons/runsystem.sh
+@@ -1,8 +1,8 @@
+-#!/bin/bash
++#!/bin/sh
+ #
+-# This program is run by /hurd/init at boot time after the essential
++# This program is run by /hurd/startup at boot time after the essential
+ # servers are up.  It does some initialization of its own and then
+-# execs /hurd/init or any other roughly SysV init-compatible program
++# execs /sbin/init or any other roughly SysV init-compatible program
+ # to bring up the "userland" parts of a normal system.
+ #
+ 
+@@ -25,7 +25,7 @@
+ # The init program to call.
+ #
+ # Can be overridden using init=something in the kernel command line.
+-init=/hurd/init
++init=/sbin/init
+ 
+ ###
+ 
+@@ -50,6 +50,7 @@
+     SHELL=${try}
+     exec ${SHELL}
+   done
++  exec /bin/busybox sh
+   exit 127
+ }
+ 
+@@ -60,7 +61,7 @@
+ #
+ # Normally this should be the case, but we better make sure since
+ # without the pflocal server, pipe(2) does not work.
+-if ! test -e /servers/socket/1 ; then
++if ! test -e /servers/socket/1 || ! showtrans --silent /servers/socket/1 ; then
+   # The root filesystem should be read-only at this point.
+   if fsysopts / --update --writable ; then
+     settrans -c /servers/socket/1 /hurd/pflocal

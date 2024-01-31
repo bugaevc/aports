@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+command="/bin/console"
+command_args="
+	/dev/vcs
+	-c
+	-d current_vcs
+	-d vga
+	-d pc_kbd --repeat=kbd
+	-d pc_mouse --protocol=ps/2 --repeat=mouse"
+command_args_background="--daemonize"
+description="Hurd console"
+pidfile="/var/run/console.pid"
