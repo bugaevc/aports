@@ -11,7 +11,9 @@ url="https://busybox.net/"
 arch="all"
 license="GPL-2.0-only"
 makedepends_build="perl"
-makedepends_host="linux-headers openssl-dev>3"
+makedepends_host="openssl-dev>3 $CLIBC-static"
+[ "$CKERNERL" = linux ] && makedepends_host="$makedepends_host linux-headers"
+[ "$CLIBC" = glibc ] && makedepends_host="$makedepends_host libxcrypt-dev libxcrypt-static"
 # Only build with utmps support if we are not bootstraping.
 # skalibs-static is needed for utmps-static
 [ -z "$BOOTSTRAP" ] && makedepends_host="$makedepends_host utmps-dev utmps-static skalibs-static"
