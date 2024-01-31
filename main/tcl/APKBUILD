@@ -10,7 +10,7 @@ arch="all"
 license="TCL"
 depends="tzdata"
 depends_dev="tcl"
-makedepends="zlib-dev sqlite-dev"
+makedepends_host="zlib-dev sqlite-dev"
 subpackages="$pkgname-doc $pkgname-dev"
 source="https://downloads.sourceforge.net/sourceforge/tcl/tcl$pkgver-src.tar.gz
 	tcl-stat64.patch
