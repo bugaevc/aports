@@ -10,7 +10,8 @@ subpackages="$pkgname-static $pkgname-dev $pkgname-doc"
 depends_dev="libxau-dev xcb-proto"
 checkdepends="check-dev"
 options="!check" # upstream requires an old check version (0.9.4)
-makedepends="$depends_dev libxdmcp-dev libxslt python3"
+makedepends_build="libxslt python3"
+makedepends_host="libxau-dev xcb-proto libxdmcp-dev"
 source="https://xorg.freedesktop.org/archive/individual/lib/libxcb-$pkgver.tar.xz"
 
 build() {
