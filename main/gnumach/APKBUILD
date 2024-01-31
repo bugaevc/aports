@@ -1,0 +1,95 @@
+# Contributor: me <me@example.com>
+# Maintainer: me <mw@example.com>
+pkgname=gnumach
+pkgver=1.8_git20240131
+pkgrel=0
+pkgdesc="GNU distribution of the Mach microkernel"
+url="https://www.gnu.org/software/hurd/microkernel/mach/gnumach.html"
+arch="x86-hurd x86_64-hurd"
+license="GPL-2.0-or-later"
+
+makedepends_build="autoconf automake texinfo"
+
+case "$BOOTSTRAP" in
+nocc)
+	pkgname="gnumach-dev"
+	subpackages=""
+	;;
+*)
+	if [ "$CBUILD" != "$CHOST" ] ; then
+		makedepends_build="$makedepends_build mig-$(hostspec_to_arch $CHOST)"
+	else
+		makedepends_build="$makedepends_build mig"
+	fi
+	subpackages="$pkgname-dbg $pkgname-dev $pkgname-doc"
+	;;
+esac
+
+
+
+_commit=21de343ac50f0fd4448f706d28abf74f56f8bbfc
+
+source="
+	http://git.savannah.gnu.org/cgit/hurd/gnumach.git/snapshot/gnumach-$_commit.tar.gz
+	allow-got.patch
+	"
+builddir="$srcdir/gnumach-$_commit"
+
+prepare() {
+	default_prepare
+	autoreconf -vif
+}
+
+build() {
+	if [ "$BOOTSTRAP" = nocc ] ; then
+		export CC=gcc
+		export CPPFLAGS=
+	fi
+	# LDFLAGS get passed to ld, not cc.
+	# It's easiest to unset ours.
+	LDFLAGS= \
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--exec-prefix=/ \
+		--mandir=/usr/share/man \
+		--localstatedir=/var \
+		--disable-user32
+	[ "$BOOTSTRAP" = nocc ] || make
+}
+
+check() {
+	[ "$BOOTSTRAP" = nocc ] || make check
+}
+
+package() {
+	case "$BOOTSTRAP" in
+	nocc)	make DESTDIR="$pkgdir" install-data;;
+	*)	make DESTDIR="$pkgdir" install;;
+	esac
+}
+
+dbg() {
+	# default_dbg only handles ET_DYN, while gnumach is ET_EXEC.
+	# Do the same thing, except we don't have to loop over files.
+
+	pkgdesc="$pkgdesc (debug symbols)"
+
+	local src="$pkgdir"/boot/gnumach
+	mkdir -p "$subpkgdir"/usr/lib/debug/boot
+	local dst="$subpkgdir"/usr/lib/debug/boot/gnumach.debug
+	${CROSS_COMPILE}objcopy --only-keep-debug "$src" "$dst"
+	${CROSS_COMPILE}objcopy --add-gnu-debuglink="$dst" --strip-unneeded -R .comment "$src" "$src"
+}
+
+dev() {
+	default_dev
+	amove usr/share/msgids/gnumach.msgids
+}
+
+sha512sums="
+53b4e11ac97ae5aa6031e7c4d5ff812143c9f8c711ff68b769a84daca07d6c42ac139ab8c6d0caf54c9ccd5c7dadbd0d5a8a41f4737756517ad6206f26fb0323  gnumach-21de343ac50f0fd4448f706d28abf74f56f8bbfc.tar.gz
+ce6c048c2def2d633e19f1e540eb1c108774ec75bb2800b0f9357176ddb0b84db920a34ff8ffb43cf4e0df86105d1f90c05d9906aa44f16fce1934b9ab784101  allow-got.patch
+"
