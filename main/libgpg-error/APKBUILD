@@ -9,7 +9,10 @@ url="https://www.gnupg.org/"
 arch="all"
 license="GPL-2.0-or-later AND LGPL-2.1-or-later"
 subpackages="$pkgname-static $pkgname-dev $pkgname-doc $pkgname-lisp:lisp:noarch"
-source="https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-$pkgver.tar.bz2"
+source="https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-$pkgver.tar.bz2
+	normalize-gnu-triplet.patch
+	add-hurd-amd64-support.patch
+	"
 
 build() {
 	./configure \
@@ -52,4 +55,6 @@ static() {
 
 sha512sums="
 bbb4b15dae75856ee5b1253568674b56ad155524ae29a075cb5b0a7e74c4af685131775c3ea2226fff2f84ef80855e77aa661645d002b490a795c7ae57b66a30  libgpg-error-1.47.tar.bz2
+7b5b96c3f85b4cd4389baa629ea435ae6e83838ec106e7208f04b946394f7286c200fd2c10dbd39550c4621318d49552aa55f94fff5e4b61aeacf4a737ec305c  normalize-gnu-triplet.patch
+7a8b3864e3fbe2610dacc17f16d5508e7ce56e96075ea96b66a5abf449d44048d2a3c1d3cfe2c1d6f51031951a81d18caf4c62882fda8eec368f75f81579b383  add-hurd-amd64-support.patch
 "
