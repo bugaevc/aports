@@ -1,0 +1,21 @@
+--- a/Makefile
++++ b/Makefile
+@@ -15,8 +15,6 @@
+ SHELL=/bin/sh
+ 
+ # To assist in cross-compiling
+-CC=gcc
+-AR=ar
+ RANLIB=ranlib
+ 
+ BIGFILES=-D_FILE_OFFSET_BITS=64
+--- a/Makefile-libbz2_so
++++ b/Makefile-libbz2_so
+@@ -22,7 +22,6 @@
+ 
+ 
+ SHELL=/bin/sh
+-CC=gcc
+ BIGFILES=-D_FILE_OFFSET_BITS=64
+ CFLAGS+=-fpic -fPIC -Wall -Winline $(BIGFILES) $(CPPFLAGS) -O2
+ 
