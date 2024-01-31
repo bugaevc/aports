@@ -1,0 +1,108 @@
+--- a/src/database.c
++++ b/src/database.c
+@@ -22,10 +22,13 @@
+ #include <sys/file.h>
+ #include <sys/wait.h>
+ #include <sys/stat.h>
++
++#ifdef __linux__
+ #include <sys/mount.h>
+ #include <sys/statvfs.h>
+ #include <sys/sysmacros.h>
+ #include <linux/magic.h>
++#endif
+ 
+ #include "apk_defines.h"
+ #include "apk_package.h"
+@@ -1338,6 +1341,7 @@
+ {
+ }
+ 
++#ifdef __linux__
+ static char *find_mountpoint(int atfd, const char *rel_path)
+ {
+ 	struct mntent *me;
+@@ -1366,6 +1370,7 @@
+ 
+ 	return ret;
+ }
++#endif
+ 
+ static void mark_in_cache(struct apk_database *db, int static_cache, int dirfd, const char *name, struct apk_package *pkg)
+ {
+@@ -1461,6 +1466,7 @@
+ }
+ 
+ 
++#ifdef __linux__
+ static unsigned long map_statfs_flags(unsigned long f_flag)
+ {
+ 	unsigned long mnt_flags = 0;
+@@ -1477,6 +1483,7 @@
+ 	if (f_flag & ST_MANDLOCK) mnt_flags |= ST_MANDLOCK;
+ 	return mnt_flags;
+ }
++#endif
+ 
+ void apk_db_init(struct apk_database *db)
+ {
+@@ -1536,9 +1543,11 @@
+ 		msg = "Unable to open root";
+ 		goto ret_errno;
+ 	}
++#ifdef __linux__
+ 	if (fstatfs(db->root_fd, &stfs) == 0 &&
+ 	    stfs.f_type == TMPFS_MAGIC)
+ 		db->permanent = 0;
++#endif
+ 
+ 	if (dbopts->root && dbopts->arch) {
+ 		db->arch = apk_atomize(&db->atoms, APK_BLOB_STR(dbopts->arch));
+@@ -1593,6 +1602,7 @@
+ 		if (write_arch)
+ 			apk_blob_to_file(db->root_fd, apk_arch_file, *db->arch, APK_BTF_ADD_EOL);
+ 
++#ifdef __linux__
+ 		/* mount /proc */
+ 		if (asprintf(&db->root_proc_dir, "%s/proc", db->root) == -1)
+ 			goto ret_errno;
+@@ -1607,6 +1617,7 @@
+ 			free(db->root_proc_dir);
+ 			db->root_proc_dir = NULL;
+ 		}
++#endif
+ 	}
+ 
+ 	if (!APK_BLOB_IS_NULL(dbopts->protected_paths)) {
+@@ -1624,6 +1635,7 @@
+ 	if (fd >= 0 && fstatfs(fd, &stfs) == 0) {
+ 		db->cache_dir = dbopts->cache_dir;
+ 		db->cache_fd = fd;
++#ifdef __linux__
+ 		db->cache_remount_flags = map_statfs_flags(stfs.f_flags);
+ 		if ((dbopts->open_flags & (APK_OPENF_WRITE | APK_OPENF_CACHE_WRITE)) &&
+ 		    (db->cache_remount_flags & MS_RDONLY) != 0) {
+@@ -1639,6 +1651,7 @@
+ 				goto ret_r;
+ 			}
+ 		}
++#endif
+ 	} else {
+ 		if (fd >= 0) close(fd);
+ 		db->cache_dir = apk_static_cache_dir;
+@@ -1826,6 +1839,7 @@
+ 	apk_hash_free(&db->installed.dirs);
+ 	apk_atom_free(&db->atoms);
+ 
++#ifdef __linux__
+ 	if (db->root_proc_dir) {
+ 		umount2(db->root_proc_dir, MNT_DETACH|UMOUNT_NOFOLLOW);
+ 		free(db->root_proc_dir);
+@@ -1837,6 +1851,7 @@
+ 		free(db->cache_remount_dir);
+ 		db->cache_remount_dir = NULL;
+ 	}
++#endif
+ 
+ 	if (db->keys_fd > 0) close(db->keys_fd);
+ 	if (db->cache_fd > 0) close(db->cache_fd);

@@ -1,0 +1,19 @@
+--- a/src/apk_defines.h
++++ bsrc//apk_defines.h
+@@ -101,10 +108,14 @@
+ #define APK_FORCE_MISSING_REPOSITORIES	BIT(6)
+ 
+ /* default architecture for APK packages. */
+-#if defined(__x86_64__)
++#if defined(__x86_64__) && !defined(__gnu_hurd__)
+ #define APK_DEFAULT_ARCH        "x86_64"
+-#elif defined(__i386__)
++#elif defined(__x86_64__) && defined(__gnu_hurd__)
++#define APK_DEFAULT_ARCH        "x86_64-hurd"
++#elif defined(__i386__) && !defined(__gnu_hurd__)
+ #define APK_DEFAULT_ARCH        "x86"
++#elif defined(__i386__) && defined(__gnu_hurd__)
++#define APK_DEFAULT_ARCH        "x86-hurd"
+ #elif defined(__powerpc__) && !defined(__powerpc64__)
+ #define APK_DEFAULT_ARCH	"ppc"
+ #elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__

@@ -14,9 +14,10 @@ subpackages="$pkgname-dbg $pkgname-dev $pkgname-static $pkgname-doc $pkgname-zsh
 # which would upgrade to a binary that cannot run until musl is upgraded.
 # forcing this constraint makes apk upgrade musl as part of the 'critical' transaction,
 # and update musl first.
-depends="musl>=1.2.3_git20230424"
+[ "$CLIBC" = musl ] && depends="musl>=1.2.3_git20230424"
 makedepends_build="openssl>3 lua5.3 lua5.3-lzlib scdoc"
-makedepends_host="zlib-dev openssl-dev zlib-static openssl-libs-static linux-headers"
+makedepends_host="zlib-dev openssl-dev zlib-static openssl-libs-static"
+[ "$CLIBC" = glibc ] && makedepends_host="glibc-static $makedepends_host"
 makedepends="$makedepends_build $makedepends_host"
 _lua="no"
 if [ "$CBUILD" = "$CHOST" ]; then
@@ -30,6 +31,11 @@ fi
 source="https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v$pkgver/apk-tools-v$pkgver.tar.gz
 	fix-recursive-solve-1.patch
 	fix-recursive-solve-2.patch
+	disable-mount-on-non-linux.patch
+	fix-errnos.patch
+	default-arch-hurd.patch
+	fix-makedev.patch
+	link-static-pthread.patch
 	_apk
 	"
 builddir="$srcdir/$pkgname-v$pkgver"
@@ -47,8 +53,11 @@ prepare() {
 }
 
 build() {
-	make LUA="$_lua"
-	make static LUA="$_lua"
+	if [ "$CKERNEL" = hurd ]; then
+		export CPPFLAGS="$CPPFLAGS -D PATH_MAX=4096"
+	fi
+	make VERBOSE=1 LUA="$_lua"
+	make static VERBOSE=1 LUA="$_lua"
 }
 
 check() {
@@ -96,5 +105,10 @@ sha512sums="
 95bfc6d4210c3fb0cd0226b01a67610d719bdf88574c4159b15594c379fa63a7aea88dbeba435af6920e68e65547c9472f987c53589d5f5cc3e1e1280ee8c227  apk-tools-v2.14.0.tar.gz
 c38a75ee0b4d61f5af99e5ce8b6cfe6561d32d44aea866ed08dda77dbf20231d1c7e93042ae95ca0a8dc4fcc4193834942cd1030d0b5ccca8070c198efaf0568  fix-recursive-solve-1.patch
 5f2c3c7248f200679250b763716c52ab6140db13b44cf6524bfa10c2ac101ec913d84d212b499c2fcf6630a571dbc6c5d5e15ab51760754d3253bf021053d5cc  fix-recursive-solve-2.patch
+9eedab51a9412057db25f4fc0c9674b3f9060280e55b3511c3eec168dc637a9132b1f374bac595c11e9efdbe3362ba039d1f332cadbcecc58307ebd24b589775  disable-mount-on-non-linux.patch
+109ea808409be3298248abb509c34698dbff2629a91921c3825b22776823aeee4c30f93dbc15634b197ce33747b303aad662cc90be6ad57f662656b4e492265c  fix-errnos.patch
+e2d5ba020b156ef9d7472442d0a1e4cd3ee733df39fb8f8a71044ced8fb3e3c782be921dee052eaa004081ab31d21ee4ea804384624438090a1ef518e36b552e  default-arch-hurd.patch
+d9b89f6976835e4a382c82fc6b17b4592d45d021e4321baa34cb5b55acad7b4180de3731d0ff401944090d96206ef1f8b4f5aa0e7d0cedd458694675a50f4195  fix-makedev.patch
+fdc81bcdcf154bb562ba7d5ede8728191156a3f81b8ac5df33856c4bc574a7a588d58c11e256002737ac2adfd6cf02920d05baee783252316c2de8774cfd52da  link-static-pthread.patch
 7870676720f5007eee9482786e02246f8e3474afb90e76c9c83aebe914747a8e007b5d2eed6441933f4922024b3f0664db270f21981ad6c2db877a110b0cd79e  _apk
 "
