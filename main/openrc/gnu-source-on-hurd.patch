@@ -1,0 +1,11 @@
+--- a/meson.build
++++ b/meson.build
+@@ -153,7 +153,7 @@
+ elif os == 'FreeBSD'
+   cc_os_flags = ['-D_BSD_SOURCE']
+ elif os == 'GNU'
+-  cc_os_flags = ['-D_DEFAULT_SOURCE', '-DMAXPATHLEN=4096', '-DPATH_MAX=4096']
++  cc_os_flags = ['-D_GNU_SOURCE', '-DMAXPATHLEN=4096', '-DPATH_MAX=4096']
+ endif
+ 
+ # Try and use some good cc flags if we're building from git. We don't use
