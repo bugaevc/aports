@@ -14,7 +14,6 @@ options="suid"
 depends="openssh-client openssh-sftp-server openssh-server"
 makedepends_build="autoconf automake"
 makedepends_host="
-	linux-headers
 	openssl-dev>3
 	zlib-dev
 	"
