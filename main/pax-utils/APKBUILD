@@ -10,7 +10,7 @@ arch="all"
 license="GPL-2.0-only"
 depends="scanelf"
 makedepends_build="meson"
-makedepends_host="linux-headers libcap-dev"
+[ "$CKERNEL" != hurd ] && makedepends_host="linux-headers libcap-dev"
 checkdepends="bash python3 py3-elftools"
 subpackages="$pkgname-doc scanelf:_scanelf lddtreepax:_lddtreepax:noarch"
 [ -n "$BOOTSTRAP" ] && options="$options !check" # prevent python dependency
