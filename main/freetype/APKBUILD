@@ -8,12 +8,12 @@ url="https://www.freetype.org/"
 arch="all"
 license="FTL OR GPL-2.0-or-later"
 options="!check"
-makedepends="
+makedepends_build="meson"
+makedepends_host="
 	brotli-dev
 	bzip2-dev
 	libpng-dev
 	libx11-dev
-	meson
 	zlib-dev
 	"
 subpackages="
