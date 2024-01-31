@@ -30,9 +30,7 @@ makedepends_host="
 	expat-dev
 	gdbm-dev
 	libffi-dev
-	linux-headers
 	mpdecimal-dev
-	musl-libintl
 	ncurses-dev
 	openssl-dev
 	readline-dev
@@ -41,10 +39,13 @@ makedepends_host="
 	xz-dev
 	zlib-dev
 	"
+[ "$CKERNEL" = linux ] && makedepends_host="$makedepends_host linux-headers"
+[ "$CLIBC" = musl ] && makedepends_host="$makedepends_host musl-libintl"
 source="https://www.python.org/ftp/python/$pkgver/Python-$pkgver.tar.xz
 	externally-managed
 	musl-find_library.patch
 	114495-fix-termios.patch
+	machdep-gnu.patch
 	"
 options="net" # Required for tests
 builddir="$srcdir/Python-$pkgver"
@@ -290,4 +291,5 @@ sha512sums="
 46dd8230ee2ab66e9c4157c10b2bd9c414fd7f30be0bee73e21a9eea88f63fff362d47828e0fc77ddc59df097b414b21505f8b5f98bc866381115c58ae3f4862  externally-managed
 ab8eaa2858d5109049b1f9f553198d40e0ef8d78211ad6455f7b491af525bffb16738fed60fc84e960c4889568d25753b9e4a1494834fea48291b33f07000ec2  musl-find_library.patch
 f9e70676e1f9cee1869111e5add632221c41259c515a4b7edcd0e3c4aa7d6140468554927cf31bfd014c794ae2fbf7ceb569d30cc6fac6d3870923486ba10c88  114495-fix-termios.patch
+f064c13ad74cb22ae11ef66a26ea74049197f2bd18b1232d2916b39e65a55adac7105f76d5801eddb0def9df53d7fb967e8fbd307178f51a089d81aca5baf8c3  machdep-gnu.patch
 "

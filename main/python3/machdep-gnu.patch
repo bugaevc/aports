@@ -1,0 +1,58 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -554,6 +554,9 @@
+ 	*-*-wasi)
+ 	    ac_sys_system=WASI
+ 	    ;;
++	*-gnu)
++	    ac_sys_system=GNU
++	    ;;
+ 	*)
+ 		# for now, limit cross builds to known configurations
+ 		MACHDEP="unknown"
+@@ -578,6 +581,7 @@
+     case $MACHDEP in
+ 	aix*) MACHDEP="aix";;
+ 	linux*) MACHDEP="linux";;
++	gnu*) MACHDEP="gnu";;
+ 	cygwin*) MACHDEP="cygwin";;
+ 	darwin*) MACHDEP="darwin";;
+ 	'')	MACHDEP="unknown";;
+@@ -596,7 +600,7 @@
+ AC_SUBST(_PYTHON_HOST_PLATFORM)
+ if test "$cross_compiling" = yes; then
+ 	case "$host" in
+-	*-*-linux*)
++	*-*-linux*|*-gnu)
+ 		case "$host_cpu" in
+ 		arm*)
+ 			_host_cpu=arm
+--- a/configure
++++ b/configure
+@@ -3832,6 +3832,9 @@
+ 	*-*-wasi)
+ 	    ac_sys_system=WASI
+ 	    ;;
++	*-gnu)
++	    ac_sys_system=GNU
++	    ;;
+ 	*)
+ 		# for now, limit cross builds to known configurations
+ 		MACHDEP="unknown"
+@@ -3856,6 +3859,7 @@
+     case $MACHDEP in
+ 	aix*) MACHDEP="aix";;
+ 	linux*) MACHDEP="linux";;
++	gnu*) MACHDEP="gnu";;
+ 	cygwin*) MACHDEP="cygwin";;
+ 	darwin*) MACHDEP="darwin";;
+ 	'')	MACHDEP="unknown";;
+@@ -3878,7 +3882,7 @@
+ 
+ if test "$cross_compiling" = yes; then
+ 	case "$host" in
+-	*-*-linux*)
++	*-*-linux*|*-gnu)
+ 		case "$host_cpu" in
+ 		arm*)
+ 			_host_cpu=arm
