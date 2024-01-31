@@ -9,8 +9,9 @@ arch="all !s390x"
 license="GPL-3.0-or-later"
 depends="initramfs-generator"
 triggers="grub.trigger=/boot"
-makedepends="autoconf automake bison flex font-unifont freetype-dev
-	fuse-dev gawk gettext-dev libtool linux-headers lvm2-dev python3 xz-dev"
+makedepends_build="autoconf automake bison flex libtool gawk python3"
+makedepends_host="font-unifont freetype-dev
+	fuse-dev gettext-dev linux-headers lvm2-dev xz-dev"
 install="$pkgname.post-upgrade"
 # strip handled by grub Makefiles, abuild strip breaks xen pv-grub
 options="!check !strip"  # Cannot test boot loader.
