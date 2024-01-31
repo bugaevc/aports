@@ -1,0 +1,61 @@
+--- a/src/xcb_util.c
++++ b/src/xcb_util.c
+@@ -91,38 +91,49 @@
+                                              int *displayp, int *screenp)
+ {
+     struct stat sbuf;
+-    char path[PATH_MAX];
++    char *path;
+     size_t len;
+     int _screen = 0, res;
+ 
+-    len = strlen(name);
+-    if (len >= sizeof(path))
++    path = strdup(name);
++    if (!path)
+         return 0;
+-    memcpy(path, name, len + 1);
++    len = strlen(name);
+     res = stat(path, &sbuf);
+     if (0 != res) {
+         unsigned long lscreen;
+ 	char *dot, *endptr;
+-        if (res != -1 || (errno != ENOENT && errno != ENOTDIR))
++        if (res != -1 || (errno != ENOENT && errno != ENOTDIR)) {
++            free(path);
+             return 0;
++        }
+         dot = strrchr(path, '.');
+-        if (!dot || dot[1] < '1' || dot[1] > '9')
++        if (!dot || dot[1] < '1' || dot[1] > '9') {
++            free(path);
+             return 0;
++        }
+         *dot = '\0';
+         errno = 0;
+         lscreen = strtoul(dot + 1, &endptr, 10);
+-        if (lscreen > INT_MAX || !endptr || *endptr || errno)
++        if (lscreen > INT_MAX || !endptr || *endptr || errno) {
++            free(path);
+             return 0;
+-        if (0 != stat(path, &sbuf))
++        }
++        if (0 != stat(path, &sbuf)) {
++            free(path);
+             return 0;
++        }
+         _screen = (int)lscreen;
+     }
+ 
+     if (host) {
+         *host = strdup(path);
+-        if (!*host)
++        if (!*host) {
++            free(path);
+             return 0;
++        }
+     }
++    free(path);
+ 
+     if (protocol) {
+         *protocol = strdup("unix");
