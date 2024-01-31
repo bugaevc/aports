@@ -1,0 +1,58 @@
+--- a/functions.sh.in
++++ b/functions.sh.in
+@@ -7,6 +7,7 @@
+ arch_to_hostspec() {
+ 	case "$1" in
+ 	aarch64)	echo "aarch64-alpine-linux-musl" ;;
++	aarch64-hurd)	echo "aarch64-needaname-gnu" ;;
+ 	armel)		echo "armv5-alpine-linux-musleabi" ;;
+ 	armhf)		echo "armv6-alpine-linux-musleabihf" ;;
+ 	armv7)		echo "armv7-alpine-linux-musleabihf" ;;
+@@ -24,13 +25,18 @@
+ 	riscv64)	echo "riscv64-alpine-linux-musl" ;;
+ 	s390x)		echo "s390x-alpine-linux-musl" ;;
+ 	x86)		echo "i586-alpine-linux-musl" ;;
++	x86-hurd)	echo "i586-needaname-gnu" ;;
+ 	x86_64)		echo "x86_64-alpine-linux-musl" ;;
++	x86_64-hurd)	echo "x86_64-needaname-gnu" ;;
+ 	*)		echo "unknown" ;;
+ 	esac
+ }
+ 
+ hostspec_to_arch() {
+ 	case "$1" in
++	i586-needaname-gnu)	echo "x86-hurd" ;;
++	x86_64-needaname-gnu)	echo "x86_64-hurd" ;;
++	aarch64-needaname-gnu)	echo "aarch64-hurd" ;;
+ 	aarch64*-*-*-*)		echo "aarch64" ;;
+ 	arm*-*-*-*eabi)		echo "armel" ;;
+ 	armv6*-*-*-*eabihf)	echo "armhf" ;;
+@@ -58,7 +64,15 @@
+ 	case "$1" in
+ 	*-*-*-uclibc*)	echo "uclibc" ;;
+ 	*-*-*-musl*)	echo "musl" ;;
+-	*-*-*-gnu*)	echo "glibc" ;;
++	*-gnu*)		echo "glibc" ;;
++	*)		echo "unknown" ;;
++	esac
++}
++
++hostspec_to_kernel() {
++	case "$1" in
++	*-linux*)	echo "linux" ;;
++	*-gnu)		echo "hurd" ;;
+ 	*)		echo "unknown" ;;
+ 	esac
+ }
+@@ -176,9 +190,11 @@
+ 
+ 	[ -z "$CARCH" ] && CARCH="$(hostspec_to_arch $CHOST)"
+ 	[ -z "$CLIBC" ] && CLIBC="$(hostspec_to_libc $CHOST)"
++	[ -z "$CKERNEL" ] && CKERNEL="$(hostspec_to_kernel $CHOST)"
+ 	[ -z "$CBUILD_ARCH" ] && CBUILD_ARCH="$(hostspec_to_arch $CBUILD)"
+ 	[ -z "$CTARGET_ARCH" ] && CTARGET_ARCH="$(hostspec_to_arch $CTARGET)"
+ 	[ -z "$CTARGET_LIBC" ] && CTARGET_LIBC="$(hostspec_to_libc $CTARGET)"
++	[ -z "$CTARGET_KERNEL" ] && CTARGET_KERNEL="$(hostspec_to_kernel $CTARGET)"
+ 
+ 	if [ "$CHOST" != "$CTARGET" ]; then
+ 		# setup environment for creating cross compiler
