@@ -11,8 +11,10 @@ subpackages="$pkgname-doc $pkgname-dev"
 source="https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-$pkgver.tar.gz"
 
 build() {
+	LD="$CC" \
 	./configure \
 		--build=$CBUILD \
+		--host=$CHOST \
 		--target=$CTARGET \
 		--prefix=/usr
 	make
