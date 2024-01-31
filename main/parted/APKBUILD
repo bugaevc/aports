@@ -8,11 +8,14 @@ arch="all"
 license="GPL-3.0-or-later"
 makedepends_build="bash"
 makedepends_host="
-	lvm2-dev
 	ncurses-dev
 	readline-dev
 	util-linux-dev
 	"
+case "$CKERNEL" in
+linux)	makedepends_host="$makedepends_host lvm2-dev";;
+hurd)	makedepends_host="$makedepends_host hurd-libs-dev";;
+esac
 checkdepends="
 	coreutils
 	eudev
@@ -30,6 +33,10 @@ source="https://ftp.gnu.org/gnu/parted/parted-$pkgver.tar.xz
 	"
 
 build() {
+	local _dm_configure=
+	if [ "$CKERNEL" = hurd ]; then
+		_dm_configure="--disable-device-mapper"
+	fi
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \
@@ -37,7 +44,8 @@ build() {
 		--enable-debug \
 		--disable-nls \
 		--disable-static \
-		--enable-shared
+		--enable-shared \
+		$_dm_configure
 	make
 }
 
