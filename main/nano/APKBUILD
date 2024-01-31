@@ -7,7 +7,7 @@ pkgdesc="Enhanced clone of the Pico text editor"
 url="https://www.nano-editor.org"
 arch="all"
 license="GPL-3.0-or-later"
-makedepends="linux-headers ncurses-dev"
+makedepends_host="linux-headers ncurses-dev"
 subpackages="$pkgname-doc $pkgname-syntax::noarch"
 source="https://www.nano-editor.org/dist/v${pkgver%%.*}/nano-$pkgver.tar.xz"
 
