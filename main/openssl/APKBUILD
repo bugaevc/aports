@@ -11,7 +11,9 @@ arch="all"
 license="Apache-2.0"
 replaces="openssl"
 makedepends_build="perl"
-makedepends_host="linux-headers"
+if [ "$CKERNEL" = linux ]; then
+	makedepends_host="linux-headers"
+fi
 makedepends="$makedepends_host $makedepends_build"
 subpackages="$pkgname-dbg $pkgname-libs-static $pkgname-dev $pkgname-doc
 	libcrypto$_abiver:_libcrypto libssl$_abiver:_libssl"
@@ -21,6 +23,7 @@ source="https://www.openssl.org/source/openssl-$pkgver.tar.gz
 	CVE-2023-6129.patch
 	CVE-2023-5678.patch
 	man-section.patch
+	add-hurd-x86_64-support.patch
 	"
 builddir="$srcdir/openssl-$pkgver"
 
@@ -126,9 +129,11 @@ build() {
 		ppc64)		_target="linux-ppc64" ;;
 		ppc64le)	_target="linux-ppc64le" ;;
 		x86)		_target="linux-elf" ;;
-		x86_64)		_target="linux-x86_64"; _optflags="enable-ec_nistp_64_gcc_128" ;;
+		x86_64-glibc|x86_64) _target="linux-x86_64"; _optflags="enable-ec_nistp_64_gcc_128" ;;
+		x86_64-hurd)	_target="hurd-x86_64"; _optflags="enable-ec_nistp_64_gcc_128";;
 		s390x)		_target="linux64-s390x";;
 		riscv64)	_target="linux64-riscv64";;
+		x86-hurd)	_target="hurd-x86";;
 		*)		msg "Unable to determine architecture from (CARCH=$CARCH)" ; return 1 ;;
 	esac
 
@@ -226,4 +231,5 @@ a69df4a018f57dee7d8a57c8003a6869eba11f1eaa394518976642a993780d0de3326019e92dea4c
 9a024a3f3bf2d579f3d98874fd662ccd8c3b8b5bb6379ac6186a55b3ef9ca8bd58d35393d894b52c11a3a91cff700d2c9455ee35f0ae9d9b6d61bac96cb45e21  CVE-2023-6129.patch
 04123b1822e7faff3ff5be0ad3ef8f7d06cfeb4cc976571f30b8c6a0ad42753f5dbbc5c13fc549ac67c64958dc050ed5c8034ade96e9574bb4e44787dde387e4  CVE-2023-5678.patch
 8c44e990fe8a820f649631b9f81cf28225b7516065169a7f68e2dd7c067b30df9b2c6cb88fa826afbc9fcdaf156360aabf7c498d2d9ed452968815b12b004809  man-section.patch
+25b631aeb4e14b06a2809db3f12df564a8cb7e54f49327693e906d9d110d6f8f1dbe812e63fa71a17c84fb90344d3f1c3708510b07acfd25045e30cc376bf31c  add-hurd-x86_64-support.patch
 "
