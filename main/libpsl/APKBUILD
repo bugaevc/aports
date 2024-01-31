@@ -15,7 +15,6 @@ source="https://github.com/rockdaboot/libpsl/releases/download/$pkgver/libpsl-$p
 build() {
 	abuild-meson \
 		--default-library=both \
-		-Db_lto=true \
 		. output
 	meson compile -C output
 }
