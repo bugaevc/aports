@@ -7,7 +7,7 @@ description="Generate machine-id if needed"
 
 depend() {
 	need root
-	[ "$(uname)" = GNU ] || need dev
+	[ "$RC_UNAME" = GNU ] || need dev
 }
 
 start() {
