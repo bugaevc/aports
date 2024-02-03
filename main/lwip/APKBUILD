@@ -1,0 +1,43 @@
+# Contributor: me <me@example.com>
+# Maintainer: me <mw@example.com>
+pkgname=lwip
+pkgver=2.2.0
+pkgrel=0
+pkgdesc="Lightweight TCP/IP stack"
+url="https://savannah.nongnu.org/projects/lwip/"
+arch="all"
+license="BSD-3-Clause" # FIXME not quite
+
+makedepends_build="cmake samurai"
+
+subpackages="$pkgname-dbg $pkgname-dev"
+
+source="https://git.savannah.nongnu.org/cgit/lwip.git/snapshot/lwip-STABLE-2_2_0_RELEASE.tar.gz
+	posixlib.patch::https://salsa.debian.org/debian/lwip/-/raw/3dfefc0f62aae5a5f296f51619dcbffe603a8ce8/debian/patches/posixlib"
+builddir="$srcdir/lwip-STABLE-2_2_0_RELEASE"
+
+build() {
+	if [ "$CBUILD" != "$CHOST" ]; then
+		local crossopts="-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_HOST_SYSTEM_NAME=Linux"
+	fi
+	cmake -S contrib/ports/unix/posixlib -B build -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_INSTALL_LIBDIR=lib \
+		-DBUILD_SHARED_LIBS=ON \
+		-DCMAKE_BUILD_TYPE=None \
+		$crossopts
+	cmake --build build
+}
+
+check() {
+	ctest --test-dir build --output-on-failure
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+sha512sums="
+df60b14ee50ee2ab5e3fc07844f44b9b0698cc581407a22b05a2da834a23b9a946ea46e30e373b64694999920bc06b2787c733623a459591d66f88ee3470f86b  lwip-STABLE-2_2_0_RELEASE.tar.gz
+58db06b6a5ba7325559da4d2160a013ad682019a7a875d7c67fceeaa4bd13eb7f29dce1fc9cadedf2dcdf11e7250f5ea12bf11fd5c6770731a28062f2d0b9b80  posixlib.patch
+"
