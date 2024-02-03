@@ -17,7 +17,7 @@ options="!check"  # No test suite
 license="ISC"
 depends="s6-ipcserver>=2.12"
 depends_static="skalibs-static"
-makedepends="skalibs-dev>=2.14"
+makedepends_host="skalibs-dev>=2.14"
 subpackages="$pkgname-static $pkgname-libs $pkgname-dev $pkgname-doc $pkgname-openrc"
 source="https://skarnet.org/software/utmps/utmps-$pkgver.tar.gz
 	utmp-prepare.initd
