@@ -11,7 +11,9 @@ makedepends_build="autoconf automake"
 makedepends_host="pcre2-dev"
 checkdepends="coreutils bash diffutils"
 subpackages="$pkgname-doc"
-source="https://mirrors.kernel.org/gnu/grep/grep-$pkgver.tar.xz"
+source="https://mirrors.kernel.org/gnu/grep/grep-$pkgver.tar.xz
+	add-hurd-x86_64-1.patch
+	add-hurd-x86_64-2.patch"
 
 build() {
 	[ "$CBUILD" = "$CHOST" ] && export CFLAGS="$CFLAGS -flto=auto"
@@ -39,4 +41,6 @@ package() {
 
 sha512sums="
 f254a1905a08c8173e12fbdd4fd8baed9a200217fba9d7641f0d78e4e002c1f2a621152d67027d9b25f0bb2430898f5233dc70909d8464fd13d7dd9298e65c42  grep-3.11.tar.xz
+f1d17611ca053b03f72f02952a6411ec52c087159985318aaeb6afa5004221eb97ea676b10646d6face0eabab05a54bf21e907c524337a8b0a3443e69cd95f13  add-hurd-x86_64-1.patch
+36efeece70749d4a87d5b188e15bfc795a11736f75cb3d16e85b0200c3bc3cc551d3f62708c5373073ad478d3f1f1821982b17e06e3c7fcf0711d63512ce8c96  add-hurd-x86_64-2.patch
 "
